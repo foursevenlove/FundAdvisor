@@ -3,14 +3,14 @@ import { Card, Input, List, Typography, Space, Tag, Button, Empty, message } fro
 import { Search, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import ApiService, { Fund } from '../services/api'
+import ApiService, { Fund, FundSearchResult } from '../services/api'
 
 const { Title, Text } = Typography
 
 const FundSearch: React.FC = () => {
   const navigate = useNavigate()
   const [searchValue, setSearchValue] = useState('')
-  const [searchResults, setSearchResults] = useState<Fund[]>([])
+  const [searchResults, setSearchResults] = useState<FundSearchResult[]>([])
   const [loading, setLoading] = useState(false)
   const [popularFunds, setPopularFunds] = useState<Fund[]>([])
 
@@ -104,9 +104,9 @@ const FundSearch: React.FC = () => {
     }
   }
 
-  const handleAddToWatchlist = async (fund: Fund) => {
+  const handleAddToWatchlist = async (fund: FundSearchResult) => {
     try {
-      await ApiService.addToWatchlist(fund.id)
+      await ApiService.addToWatchlist(fund.code)
       message.success(`已添加 ${fund.name} 到关注列表`)
     } catch (error) {
       console.error('添加到关注列表失败:', error)
@@ -216,16 +216,8 @@ const FundSearch: React.FC = () => {
                         description={
                           <Space direction="vertical" size="small">
                             <Text type="secondary">
-                              基金经理：{fund.manager} | 基金公司：{fund.company}
+                              基金经理：{fund.manager || '暂无'} | 基金公司：{fund.company || '暂无'}
                             </Text>
-                            {fund.current_nav && (
-                              <Space>
-                                <Text>
-                                  净值：<Text strong>{fund.current_nav.toFixed(4)}</Text>
-                                </Text>
-                                {fund.daily_return !== undefined && renderChangePercent(fund.daily_return)}
-                              </Space>
-                            )}
                           </Space>
                         }
                       />

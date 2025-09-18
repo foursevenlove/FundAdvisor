@@ -18,12 +18,18 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      '/funds': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
   css: {
     preprocessorOptions: {
       scss: {
-        additionalData: `@import "@/styles/variables.scss";`,
+        api: 'modern-compiler',
+        additionalData: `@use "@/styles/variables.scss" as *;`,
       },
     },
   },

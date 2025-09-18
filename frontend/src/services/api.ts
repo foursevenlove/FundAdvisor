@@ -75,6 +75,15 @@ export interface Fund {
   description: string
 }
 
+export interface FundSearchResult {
+  id: string
+  code: string
+  name: string
+  fund_type?: string
+  manager?: string
+  company?: string
+}
+
 export interface FundNavHistory {
   date: string
   unit_nav: number
@@ -198,11 +207,11 @@ export class ApiService {
   }
 
   static async getFundById(fundId: string): Promise<Fund> {
-    const response = await apiClient.get(`/api/v1/funds/${fundId}`)
+    const response = await apiClient.get(`/api/v1/funds/${fundId}/info`)
     return response.data
   }
 
-  static async searchFunds(query: string, limit = 10): Promise<Fund[]> {
+  static async searchFunds(query: string, limit = 10): Promise<FundSearchResult[]> {
     const response = await apiClient.get('/api/v1/funds/search', {
       params: { q: query, limit }
     })
@@ -214,7 +223,7 @@ export class ApiService {
     startDate?: string,
     endDate?: string
   ): Promise<FundNavHistory[]> {
-    const response = await apiClient.get(`/api/v1/funds/${fundId}/nav-history`, {
+    const response = await apiClient.get(`/api/v1/funds/${fundId}/net-values`, {
       params: { start_date: startDate, end_date: endDate }
     })
     return response.data.data
@@ -226,8 +235,8 @@ export class ApiService {
     return response.data
   }
 
-  static async addToWatchlist(fundId: string): Promise<void> {
-    await apiClient.post('/api/v1/watchlist/', { fund_id: fundId })
+  static async addToWatchlist(fundCode: string): Promise<void> {
+    await apiClient.post('/api/v1/watchlist/', { fund_id: fundCode })
   }
 
   static async removeFromWatchlist(fundId: string): Promise<void> {

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { Card, Row, Col, Typography, Space, Tag, Button, Statistic, Tabs, Table, Alert } from 'antd'
+import { Card, Row, Col, Typography, Space, Tag, Button, Statistic, Tabs, Table, Alert, message } from 'antd'
 import { ArrowUp, ArrowDown, Star, TrendingUp, Calendar, User, Building } from 'lucide-react'
 import { motion } from 'framer-motion'
 import ReactECharts from 'echarts-for-react'
+import ApiService from '../services/api'
 
 const { Title, Text, Paragraph } = Typography
 const { TabPane } = Tabs
@@ -34,20 +35,61 @@ const FundDetail: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [isWatched, setIsWatched] = useState(false)
 
-  // 模拟基金数据
-  const mockFundInfo: FundInfo = {
-    code: code || '000001',
-    name: '华夏成长混合',
-    type: '混合型基金',
-    manager: '张三',
-    company: '华夏基金管理有限公司',
-    establishDate: '2001-12-18',
-    scale: '156.78亿元',
-    currentValue: 1.2345,
-    changePercent: 2.34,
-    changeAmount: 0.0283,
-    description: '本基金主要投资于具有良好成长性的上市公司股票，通过精选个股和严格的风险管理，力争实现基金资产的长期稳健增值。'
-  }
+  useEffect(() => {
+    const fetchFundDetail = async () => {
+      if (!code) {
+        message.error('基金代码无效')
+        return
+      }
+
+      try {
+        setLoading(true)
+        // 尝试通过基金代码获取基金信息
+        const fund = await ApiService.getFundById(code)
+
+        // 转换API数据格式到组件使用的格式
+        const fundData: FundInfo = {
+          code: fund.code,
+          name: fund.name,
+          type: fund.fund_type,
+          manager: fund.manager,
+          company: fund.company,
+          establishDate: fund.establish_date,
+          scale: fund.scale ? `${(fund.scale / 100000000).toFixed(2)}亿元` : '--',
+          currentValue: fund.current_nav || 1.0000,
+          changePercent: fund.daily_return || 0,
+          changeAmount: (fund.current_nav || 1.0000) * (fund.daily_return || 0) / 100,
+          description: fund.description || '暂无描述'
+        }
+
+        setFundInfo(fundData)
+      } catch (error) {
+        console.error('获取基金详情失败:', error)
+        message.error('获取基金详情失败，请检查基金代码是否正确')
+
+        // 如果API调用失败，使用基于code的动态模拟数据作为后备
+        const fallbackFundInfo: FundInfo = {
+          code: code,
+          name: `基金${code}`,
+          type: '混合型基金',
+          manager: '基金经理',
+          company: '基金管理有限公司',
+          establishDate: '2020-01-01',
+          scale: '--',
+          currentValue: 1.0000 + Math.random() * 0.5,
+          changePercent: (Math.random() - 0.5) * 6,
+          changeAmount: (Math.random() - 0.5) * 0.1,
+          description: '暂无基金描述信息'
+        }
+
+        setFundInfo(fallbackFundInfo)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchFundDetail()
+  }, [code])
 
   // 模拟历史净值数据
   const getHistoryChartOption = () => {
@@ -200,17 +242,22 @@ const FundDetail: React.FC = () => {
     }
   ]
 
-  useEffect(() => {
-    // 模拟API调用
-    setTimeout(() => {
-      setFundInfo(mockFundInfo)
-      setLoading(false)
-    }, 1000)
-  }, [code])
+  const handleToggleWatch = async () => {
+    if (!fundInfo) return
 
-  const handleToggleWatch = () => {
-    setIsWatched(!isWatched)
-    // TODO: 实现关注/取消关注逻辑
+    try {
+      if (isWatched) {
+        await ApiService.removeFromWatchlist(fundInfo.code)
+        message.success('已取消关注')
+      } else {
+        await ApiService.addToWatchlist(fundInfo.code)
+        message.success('已添加关注')
+      }
+      setIsWatched(!isWatched)
+    } catch (error) {
+      console.error('操作关注失败:', error)
+      message.error(isWatched ? '取消关注失败' : '添加关注失败')
+    }
   }
 
   if (loading || !fundInfo) {

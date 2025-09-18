@@ -128,16 +128,21 @@ class WatchListCreate(WatchListBase):
     pass
 
 
+class WatchListRequest(BaseModel):
+    """关注列表请求模型"""
+    fund_id: str = Field(..., description="基金ID")
+
+
 class WatchListResponse(BaseModel):
     """关注列表响应模型"""
-    id: int
+    id: str
+    fund_id: str
     fund_code: str
     fund_name: str
     fund_type: Optional[str] = None
-    current_value: Optional[float] = None
-    change_percent: Optional[float] = None
-    latest_signal: Optional[StrategySignalResponse] = None
-    created_at: datetime
+    manager: Optional[str] = None
+    company: Optional[str] = None
+    created_at: str
     
     class Config:
         from_attributes = True

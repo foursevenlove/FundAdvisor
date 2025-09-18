@@ -10,7 +10,7 @@ from .fund import (
     FundNetValueBase, FundNetValue,
     FundSearchRequest, FundSearchResult, FundRealtimeData,
     StrategySignalResponse, StrategyAnalysisRequest, StrategyAnalysisResponse,
-    WatchListBase, WatchListCreate, WatchListResponse,
+    WatchListBase, WatchListCreate, WatchListRequest, WatchListResponse,
     HoldingBase, HoldingCreate, HoldingUpdate, HoldingResponse,
     PortfolioSummary, FundDetailResponse,
     APIResponse, PaginatedResponse, SignalTypeEnum
@@ -26,7 +26,7 @@ __all__ = [
     "FundNetValueBase", "FundNetValue",
     "FundSearchRequest", "FundSearchResult", "FundRealtimeData",
     "StrategySignalResponse", "StrategyAnalysisRequest", "StrategyAnalysisResponse",
-    "WatchListBase", "WatchListCreate", "WatchListResponse",
+    "WatchListBase", "WatchListCreate", "WatchListRequest", "WatchListResponse",
     "HoldingBase", "HoldingCreate", "HoldingUpdate", "HoldingResponse",
     "PortfolioSummary", "FundDetailResponse",
     "APIResponse", "PaginatedResponse", "SignalTypeEnum"

@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
     # CORS 配置
-    BACKEND_CORS_ORIGINS: list = ["http://localhost:3000", "http://localhost:8080"]
+    BACKEND_CORS_ORIGINS: list = ["http://localhost:3000","http://localhost:3001/", "http://localhost:8080"]
     
     # akshare 数据更新配置
     DATA_UPDATE_INTERVAL: int = 300  # 5分钟更新一次

@@ -1,21 +1,25 @@
 import React, { useState, useEffect } from 'react'
-import { Card, Table, Space, Button, Typography, Tag, Popconfirm, Empty, Row, Col, Statistic } from 'antd'
+import { Card, Table, Space, Button, Typography, Tag, Popconfirm, Empty, Row, Col, Statistic, message } from 'antd'
 import { Star, TrendingUp, TrendingDown, Trash2, Eye, Plus } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
+import ApiService from '../services/api'
 
 const { Title, Text } = Typography
 
 interface WatchedFund {
   id: string
-  code: string
-  name: string
-  type: string
-  currentValue: number
-  changePercent: number
-  changeAmount: number
-  addedDate: string
-  lastUpdate: string
+  fund_id: string
+  fund_code: string
+  fund_name: string
+  fund_type: string
+  manager?: string
+  company?: string
+  currentValue?: number
+  changePercent?: number
+  changeAmount?: number
+  created_at: string
+  lastUpdate?: string
 }
 
 const WatchList: React.FC = () => {
@@ -23,65 +27,49 @@ const WatchList: React.FC = () => {
   const [watchedFunds, setWatchedFunds] = useState<WatchedFund[]>([])
   const [loading, setLoading] = useState(true)
 
-  // 模拟关注的基金数据
-  const mockWatchedFunds: WatchedFund[] = [
-    {
-      id: '1',
-      code: '000001',
-      name: '华夏成长混合',
-      type: '混合型',
-      currentValue: 1.2345,
-      changePercent: 2.34,
-      changeAmount: 0.0283,
-      addedDate: '2024-01-15',
-      lastUpdate: '2024-01-20 15:00:00'
-    },
-    {
-      id: '2',
-      code: '110022',
-      name: '易方达消费行业股票',
-      type: '股票型',
-      currentValue: 3.4567,
-      changePercent: -1.23,
-      changeAmount: -0.0431,
-      addedDate: '2024-01-10',
-      lastUpdate: '2024-01-20 15:00:00'
-    },
-    {
-      id: '3',
-      code: '161725',
-      name: '招商中证白酒指数',
-      type: '指数型',
-      currentValue: 0.9876,
-      changePercent: 0.56,
-      changeAmount: 0.0055,
-      addedDate: '2024-01-08',
-      lastUpdate: '2024-01-20 15:00:00'
-    },
-    {
-      id: '4',
-      code: '519066',
-      name: '汇添富蓝筹稳健混合',
-      type: '混合型',
-      currentValue: 2.1234,
-      changePercent: 1.87,
-      changeAmount: 0.0390,
-      addedDate: '2024-01-05',
-      lastUpdate: '2024-01-20 15:00:00'
-    }
-  ]
-
   useEffect(() => {
-    // 模拟API调用
-    setTimeout(() => {
-      setWatchedFunds(mockWatchedFunds)
-      setLoading(false)
-    }, 1000)
+    const fetchWatchlist = async () => {
+      try {
+        const data = await ApiService.getWatchlist()
+        // Transform the data to match our interface
+        const transformedData: WatchedFund[] = data.map((item: any) => ({
+          id: item.id,
+          fund_id: item.fund_id,
+          fund_code: item.fund_code,
+          fund_name: item.fund_name,
+          fund_type: item.fund_type || '',
+          manager: item.manager,
+          company: item.company,
+          created_at: item.created_at,
+          // Add mock current values since the API doesn't provide them yet
+          currentValue: Math.random() * 2 + 1,
+          changePercent: (Math.random() - 0.5) * 6,
+          changeAmount: (Math.random() - 0.5) * 0.1,
+          lastUpdate: new Date().toLocaleString()
+        }))
+        setWatchedFunds(transformedData)
+      } catch (error) {
+        console.error('获取关注列表失败:', error)
+        message.error('获取关注列表失败，请稍后重试')
+        // Fall back to empty list instead of mock data
+        setWatchedFunds([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchWatchlist()
   }, [])
 
-  const handleRemoveFromWatchlist = (fundId: string) => {
-    setWatchedFunds(prev => prev.filter(fund => fund.id !== fundId))
-    // TODO: 调用API删除关注
+  const handleRemoveFromWatchlist = async (fundId: string) => {
+    try {
+      await ApiService.removeFromWatchlist(fundId)
+      setWatchedFunds(prev => prev.filter(fund => fund.fund_id !== fundId))
+      message.success('已取消关注')
+    } catch (error) {
+      console.error('取消关注失败:', error)
+      message.error('取消关注失败，请稍后重试')
+    }
   }
 
   const handleViewDetail = (code: string) => {
@@ -94,10 +82,10 @@ const WatchList: React.FC = () => {
 
   // 计算统计数据
   const totalFunds = watchedFunds.length
-  const gainFunds = watchedFunds.filter(fund => fund.changePercent > 0).length
-  const lossFunds = watchedFunds.filter(fund => fund.changePercent < 0).length
-  const avgChange = watchedFunds.length > 0 
-    ? watchedFunds.reduce((sum, fund) => sum + fund.changePercent, 0) / watchedFunds.length 
+  const gainFunds = watchedFunds.filter(fund => (fund.changePercent || 0) > 0).length
+  const lossFunds = watchedFunds.filter(fund => (fund.changePercent || 0) < 0).length
+  const avgChange = watchedFunds.length > 0
+    ? watchedFunds.reduce((sum, fund) => sum + (fund.changePercent || 0), 0) / watchedFunds.length
     : 0
 
   const columns = [
@@ -108,14 +96,14 @@ const WatchList: React.FC = () => {
         <Space direction="vertical" size="small">
           <Space>
             <Text strong style={{ fontSize: 16 }}>
-              {record.name}
+              {record.fund_name}
             </Text>
-            <Tag color="blue">{record.code}</Tag>
+            <Tag color="blue">{record.fund_code}</Tag>
           </Space>
           <Space>
-            <Tag>{record.type}</Tag>
+            <Tag>{record.fund_type}</Tag>
             <Text type="secondary" style={{ fontSize: 12 }}>
-              关注于 {record.addedDate}
+              关注于 {new Date(record.created_at).toLocaleDateString()}
             </Text>
           </Space>
         </Space>
@@ -128,7 +116,7 @@ const WatchList: React.FC = () => {
       key: 'currentValue',
       render: (value: number) => (
         <Text strong style={{ fontSize: 16 }}>
-          {value.toFixed(4)}
+          {value ? value.toFixed(4) : '--'}
         </Text>
       ),
       align: 'right' as const
@@ -139,35 +127,41 @@ const WatchList: React.FC = () => {
       render: (_: any, record: WatchedFund) => (
         <Space direction="vertical" size="small" style={{ textAlign: 'right' }}>
           <Space>
-            {record.changePercent > 0 ? (
+            {(record.changePercent || 0) > 0 ? (
               <TrendingUp size={16} color="#52c41a" />
-            ) : record.changePercent < 0 ? (
+            ) : (record.changePercent || 0) < 0 ? (
               <TrendingDown size={16} color="#f5222d" />
             ) : null}
             <Text
               style={{
-                color: record.changePercent > 0 ? '#52c41a' : 
-                       record.changePercent < 0 ? '#f5222d' : '#8c8c8c',
+                color: (record.changePercent || 0) > 0 ? '#52c41a' :
+                       (record.changePercent || 0) < 0 ? '#f5222d' : '#8c8c8c',
                 fontWeight: 500,
                 fontSize: 16
               }}
             >
-              {record.changePercent > 0 ? '+' : ''}{record.changePercent.toFixed(2)}%
+              {record.changePercent !== undefined
+                ? `${(record.changePercent || 0) > 0 ? '+' : ''}${(record.changePercent || 0).toFixed(2)}%`
+                : '--'
+              }
             </Text>
           </Space>
           <Text
             style={{
-              color: record.changeAmount > 0 ? '#52c41a' : 
-                     record.changeAmount < 0 ? '#f5222d' : '#8c8c8c',
+              color: (record.changeAmount || 0) > 0 ? '#52c41a' :
+                     (record.changeAmount || 0) < 0 ? '#f5222d' : '#8c8c8c',
               fontSize: 14
             }}
           >
-            {record.changeAmount > 0 ? '+' : ''}{record.changeAmount.toFixed(4)}
+            {record.changeAmount !== undefined
+              ? `${(record.changeAmount || 0) > 0 ? '+' : ''}${(record.changeAmount || 0).toFixed(4)}`
+              : '--'
+            }
           </Text>
         </Space>
       ),
       align: 'right' as const,
-      sorter: (a: WatchedFund, b: WatchedFund) => a.changePercent - b.changePercent
+      sorter: (a: WatchedFund, b: WatchedFund) => (a.changePercent || 0) - (b.changePercent || 0)
     },
     {
       title: '最后更新',
@@ -188,14 +182,14 @@ const WatchList: React.FC = () => {
           <Button
             type="text"
             icon={<Eye size={16} />}
-            onClick={() => handleViewDetail(record.code)}
+            onClick={() => handleViewDetail(record.fund_code)}
           >
             详情
           </Button>
           <Popconfirm
             title="确认取消关注"
             description="确定要从关注列表中移除这只基金吗？"
-            onConfirm={() => handleRemoveFromWatchlist(record.id)}
+            onConfirm={() => handleRemoveFromWatchlist(record.fund_id)}
             okText="确认"
             cancelText="取消"
           >

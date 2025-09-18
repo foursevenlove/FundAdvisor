@@ -36,7 +36,7 @@ class DataService:
             # 获取公募基金列表
             fund_list = self._get_fund_list()
             
-            if not fund_list:
+            if fund_list is None or fund_list.empty:
                 return []
             
             # 模糊搜索
