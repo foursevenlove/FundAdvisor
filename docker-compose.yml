@@ -1,0 +1,167 @@
+version: '3.8'
+
+services:
+  # PostgreSQL数据库
+  postgres:
+    image: postgres:15-alpine
+    container_name: fundadvisor-postgres
+    environment:
+      POSTGRES_DB: fundadvisor
+      POSTGRES_USER: fundadvisor
+      POSTGRES_PASSWORD: fundadvisor123
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - fundadvisor-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fundadvisor -d fundadvisor"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis缓存
+  redis:
+    image: redis:7-alpine
+    container_name: fundadvisor-redis
+    command: redis-server --appendonly yes --requirepass fundadvisor123
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - fundadvisor-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 后端API服务
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fundadvisor-backend
+    environment:
+      - DATABASE_URL=postgresql://fundadvisor:fundadvisor123@postgres:5432/fundadvisor
+      - REDIS_URL=redis://:fundadvisor123@redis:6379/0
+      - SECRET_KEY=your-secret-key-here-change-in-production
+      - DEBUG=False
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:80
+    volumes:
+      - ./backend:/app
+      - backend_logs:/app/logs
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - fundadvisor-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 前端Web服务
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: fundadvisor-frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - fundadvisor-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Nginx负载均衡器（可选，用于生产环境）
+  nginx:
+    image: nginx:alpine
+    container_name: fundadvisor-nginx
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    ports:
+      - "8080:80"
+      - "8443:443"
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - fundadvisor-network
+    restart: unless-stopped
+    profiles:
+      - production
+
+  # 数据库迁移服务
+  migration:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fundadvisor-migration
+    environment:
+      - DATABASE_URL=postgresql://fundadvisor:fundadvisor123@postgres:5432/fundadvisor
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - fundadvisor-network
+    profiles:
+      - migration
+
+  # 定时任务服务（数据更新）
+  scheduler:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fundadvisor-scheduler
+    environment:
+      - DATABASE_URL=postgresql://fundadvisor:fundadvisor123@postgres:5432/fundadvisor
+      - REDIS_URL=redis://:fundadvisor123@redis:6379/0
+    command: ["python", "-m", "app.scheduler"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - fundadvisor-network
+    restart: unless-stopped
+    profiles:
+      - production
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  backend_logs:
+    driver: local
+
+networks:
+  fundadvisor-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

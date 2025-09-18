@@ -1,0 +1,339 @@
+// 组件样式
+
+// 卡片组件
+.fund-card {
+  background: $bg-color-card;
+  border: 1px solid $border-color;
+  border-radius: $border-radius;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+  transition: all $transition-normal $ease-in-out;
+  
+  &:hover {
+    border-color: $primary-color;
+    box-shadow: $box-shadow;
+    transform: translateY(-2px);
+  }
+  
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: $spacing-md;
+    
+    .fund-code {
+      font-size: $font-size-sm;
+      color: $text-color-secondary;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    }
+    
+    .fund-name {
+      font-size: $font-size-lg;
+      font-weight: $font-weight-medium;
+      color: $text-color;
+    }
+  }
+  
+  &__content {
+    .fund-info {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: $spacing-md;
+      
+      .info-item {
+        .label {
+          font-size: $font-size-xs;
+          color: $text-color-secondary;
+          margin-bottom: $spacing-xs;
+        }
+        
+        .value {
+          font-size: $font-size-md;
+          font-weight: $font-weight-medium;
+          color: $text-color;
+          
+          &.positive {
+            color: $success-color;
+          }
+          
+          &.negative {
+            color: $error-color;
+          }
+        }
+      }
+    }
+  }
+  
+  &__footer {
+    margin-top: $spacing-lg;
+    padding-top: $spacing-md;
+    border-top: 1px solid $border-color-light;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
+// 策略信号组件
+.strategy-signal {
+  display: inline-flex;
+  align-items: center;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $border-radius-small;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  
+  &.buy {
+    background: rgba(82, 196, 26, 0.1);
+    color: $success-color;
+    border: 1px solid rgba(82, 196, 26, 0.2);
+  }
+  
+  &.sell {
+    background: rgba(245, 34, 45, 0.1);
+    color: $error-color;
+    border: 1px solid rgba(245, 34, 45, 0.2);
+  }
+  
+  &.hold {
+    background: rgba(250, 173, 20, 0.1);
+    color: $warning-color;
+    border: 1px solid rgba(250, 173, 20, 0.2);
+  }
+  
+  .signal-icon {
+    margin-right: $spacing-xs;
+    font-size: 12px;
+  }
+  
+  .signal-strength {
+    margin-left: $spacing-xs;
+    opacity: 0.8;
+  }
+}
+
+// 图表容器
+.chart-container {
+  background: $bg-color-card;
+  border: 1px solid $border-color;
+  border-radius: $border-radius;
+  padding: $spacing-lg;
+  
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: $spacing-lg;
+    
+    .chart-title {
+      font-size: $font-size-lg;
+      font-weight: $font-weight-medium;
+      color: $text-color;
+    }
+    
+    .chart-controls {
+      display: flex;
+      gap: $spacing-sm;
+    }
+  }
+  
+  &__content {
+    min-height: 400px;
+    
+    .echarts-for-react {
+      width: 100% !important;
+      height: 400px !important;
+    }
+  }
+}
+
+// 搜索框
+.fund-search {
+  position: relative;
+  
+  &__input {
+    width: 100%;
+    padding: $spacing-md $spacing-lg;
+    font-size: $font-size-md;
+    background: $bg-color-card;
+    border: 2px solid $border-color;
+    border-radius: $border-radius-large;
+    color: $text-color;
+    transition: all $transition-normal $ease-in-out;
+    
+    &:focus {
+      outline: none;
+      border-color: $primary-color;
+      box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.1);
+    }
+    
+    &::placeholder {
+      color: $text-color-secondary;
+    }
+  }
+  
+  &__results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: $bg-color-card;
+    border: 1px solid $border-color;
+    border-radius: $border-radius;
+    box-shadow: $box-shadow;
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: $z-index-dropdown;
+    
+    .search-result-item {
+      padding: $spacing-md;
+      border-bottom: 1px solid $border-color-light;
+      cursor: pointer;
+      transition: background-color $transition-fast $ease-in-out;
+      
+      &:hover {
+        background: $bg-color-lighter;
+      }
+      
+      &:last-child {
+        border-bottom: none;
+      }
+      
+      .fund-code {
+        font-size: $font-size-sm;
+        color: $primary-color;
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      }
+      
+      .fund-name {
+        font-size: $font-size-md;
+        color: $text-color;
+        margin: $spacing-xs 0;
+      }
+      
+      .fund-type {
+        font-size: $font-size-xs;
+        color: $text-color-secondary;
+      }
+    }
+  }
+}
+
+// 加载状态
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  
+  .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid $border-color;
+    border-top: 3px solid $primary-color;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+// 空状态
+.empty-state {
+  text-align: center;
+  padding: $spacing-xxl;
+  color: $text-color-secondary;
+  
+  .empty-icon {
+    font-size: 48px;
+    margin-bottom: $spacing-lg;
+    opacity: 0.5;
+  }
+  
+  .empty-title {
+    font-size: $font-size-lg;
+    margin-bottom: $spacing-sm;
+  }
+  
+  .empty-description {
+    font-size: $font-size-sm;
+    line-height: $line-height-lg;
+  }
+}
+
+// 响应式网格
+.responsive-grid {
+  display: grid;
+  gap: $spacing-lg;
+  
+  &.cols-1 {
+    grid-template-columns: 1fr;
+  }
+  
+  &.cols-2 {
+    grid-template-columns: repeat(2, 1fr);
+    
+    @media (max-width: $breakpoint-md) {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  &.cols-3 {
+    grid-template-columns: repeat(3, 1fr);
+    
+    @media (max-width: $breakpoint-lg) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    
+    @media (max-width: $breakpoint-sm) {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  &.cols-4 {
+    grid-template-columns: repeat(4, 1fr);
+    
+    @media (max-width: $breakpoint-xl) {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    
+    @media (max-width: $breakpoint-lg) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    
+    @media (max-width: $breakpoint-sm) {
+      grid-template-columns: 1fr;
+    }
+  }
+}
+
+// 页面容器
+.page-container {
+  padding: $spacing-lg;
+  max-width: 1400px;
+  margin: 0 auto;
+  
+  @media (max-width: $breakpoint-sm) {
+    padding: $spacing-md;
+  }
+  
+  .page-header {
+    margin-bottom: $spacing-xl;
+    
+    .page-title {
+      font-size: $font-size-xxl;
+      font-weight: $font-weight-semibold;
+      color: $text-color;
+      margin-bottom: $spacing-sm;
+    }
+    
+    .page-description {
+      font-size: $font-size-md;
+      color: $text-color-secondary;
+      line-height: $line-height-lg;
+    }
+  }
+}

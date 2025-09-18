@@ -1,0 +1,470 @@
+// 页面通用样式
+.page-container {
+  padding: 24px;
+  min-height: calc(100vh - 64px);
+  background: var(--bg-color);
+
+  @media (max-width: 768px) {
+    padding: 16px;
+  }
+}
+
+.page-header {
+  margin-bottom: 24px;
+
+  .page-title {
+    color: var(--text-primary) !important;
+    margin-bottom: 8px !important;
+    font-weight: 600;
+  }
+
+  .page-description {
+    color: var(--text-secondary);
+    font-size: 16px;
+  }
+}
+
+// 基金搜索页面
+.search-card {
+  .ant-input-search {
+    .ant-input {
+      background: var(--input-bg);
+      border-color: var(--border-color);
+      color: var(--text-primary);
+
+      &:focus,
+      &:hover {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+      }
+    }
+
+    .ant-btn {
+      background: var(--primary-color);
+      border-color: var(--primary-color);
+
+      &:hover {
+        background: var(--primary-hover);
+        border-color: var(--primary-hover);
+      }
+    }
+  }
+}
+
+.fund-search-item {
+  background: var(--card-bg);
+  border-radius: 8px;
+  margin-bottom: 16px;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  transition: all 0.3s ease;
+
+  &:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+  }
+
+  .ant-list-item-meta-title {
+    color: var(--text-primary);
+  }
+
+  .ant-list-item-meta-description {
+    color: var(--text-secondary);
+  }
+}
+
+.fund-card-mini {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  transition: all 0.3s ease;
+
+  &:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  }
+
+  .ant-card-meta-title {
+    color: var(--text-primary);
+  }
+
+  .ant-card-meta-description {
+    color: var(--text-secondary);
+  }
+}
+
+// 基金详情页面
+.fund-header-card {
+  background: linear-gradient(135deg, var(--card-bg) 0%, var(--card-bg-secondary) 100%);
+  border: 1px solid var(--border-color);
+  margin-bottom: 24px;
+
+  .ant-card-body {
+    padding: 32px;
+
+    @media (max-width: 768px) {
+      padding: 24px;
+    }
+  }
+}
+
+.fund-info-card {
+  background: var(--card-bg-secondary);
+  border: 1px solid var(--border-color-light);
+
+  .ant-card-body {
+    padding: 16px;
+  }
+}
+
+// 关注列表页面
+.watchlist-stats {
+  .ant-statistic-title {
+    color: var(--text-secondary);
+  }
+
+  .ant-statistic-content {
+    color: var(--text-primary);
+  }
+}
+
+// 投资组合页面
+.portfolio-summary {
+  background: linear-gradient(135deg, var(--success-color) 0%, var(--success-hover) 100%);
+  color: white;
+  border: none;
+
+  .ant-statistic-title {
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  .ant-statistic-content {
+    color: white;
+  }
+}
+
+.portfolio-holding-row {
+  &:hover {
+    background: var(--hover-bg);
+  }
+}
+
+// 策略页面
+.strategy-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  transition: all 0.3s ease;
+
+  &.active {
+    border-color: var(--success-color);
+    box-shadow: 0 4px 12px rgba(82, 196, 26, 0.15);
+
+    .ant-card-head {
+      background: linear-gradient(135deg, var(--success-color) 0%, var(--success-hover) 100%);
+      color: white;
+
+      .ant-card-head-title {
+        color: white;
+      }
+    }
+  }
+
+  &.inactive {
+    opacity: 0.7;
+
+    .ant-card-head {
+      background: var(--card-bg-secondary);
+    }
+  }
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  }
+
+  .ant-card-head-title {
+    color: var(--text-primary);
+  }
+
+  .ant-card-body {
+    color: var(--text-primary);
+  }
+}
+
+.strategy-performance-chart {
+  background: var(--card-bg);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+// 响应式表格
+.responsive-table {
+  .ant-table {
+    background: var(--card-bg);
+
+    .ant-table-thead > tr > th {
+      background: var(--card-bg-secondary);
+      color: var(--text-primary);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .ant-table-tbody > tr > td {
+      background: var(--card-bg);
+      color: var(--text-primary);
+      border-bottom: 1px solid var(--border-color-light);
+    }
+
+    .ant-table-tbody > tr:hover > td {
+      background: var(--hover-bg);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .ant-table-thead {
+      display: none;
+    }
+
+    .ant-table-tbody > tr {
+      display: block;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      margin-bottom: 16px;
+      padding: 16px;
+      background: var(--card-bg);
+    }
+
+    .ant-table-tbody > tr > td {
+      display: block;
+      border: none;
+      padding: 8px 0;
+      text-align: left !important;
+
+      &:before {
+        content: attr(data-label) ": ";
+        font-weight: 600;
+        color: var(--text-secondary);
+        display: inline-block;
+        width: 100px;
+      }
+    }
+  }
+}
+
+// 统计卡片动画
+.stat-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: var(--primary-color);
+  }
+
+  .ant-statistic-title {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-bottom: 8px;
+  }
+
+  .ant-statistic-content {
+    color: var(--text-primary);
+  }
+}
+
+// 图表容器
+.chart-container {
+  background: var(--card-bg);
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+
+  .echarts-for-react {
+    background: transparent !important;
+  }
+}
+
+// 加载状态
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  background: var(--card-bg);
+  border-radius: 8px;
+}
+
+// 空状态
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  background: var(--card-bg);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+
+  .ant-empty-description {
+    color: var(--text-secondary);
+  }
+}
+
+// 标签样式
+.ant-tag {
+  border-radius: 4px;
+  font-weight: 500;
+
+  &.ant-tag-blue {
+    background: rgba(24, 144, 255, 0.1);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+  }
+
+  &.ant-tag-green {
+    background: rgba(82, 196, 26, 0.1);
+    border-color: var(--success-color);
+    color: var(--success-color);
+  }
+
+  &.ant-tag-orange {
+    background: rgba(250, 173, 20, 0.1);
+    border-color: var(--warning-color);
+    color: var(--warning-color);
+  }
+
+  &.ant-tag-red {
+    background: rgba(245, 34, 45, 0.1);
+    border-color: var(--error-color);
+    color: var(--error-color);
+  }
+}
+
+// 按钮样式增强
+.ant-btn {
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+
+  &.ant-btn-primary {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    box-shadow: 0 2px 4px rgba(24, 144, 255, 0.2);
+
+    &:hover {
+      background: var(--primary-hover);
+      border-color: var(--primary-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(24, 144, 255, 0.3);
+    }
+  }
+
+  &.ant-btn-default {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+
+    &:hover {
+      border-color: var(--primary-color);
+      color: var(--primary-color);
+    }
+  }
+}
+
+// 进度条样式
+.ant-progress {
+  .ant-progress-bg {
+    background: var(--primary-color) !important;
+  }
+
+  .ant-progress-inner {
+    background: var(--bg-color-secondary) !important;
+  }
+}
+
+// 输入框样式
+.ant-input,
+.ant-input-number {
+  background: var(--input-bg);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+
+  &:focus,
+  &:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+  }
+
+  &::placeholder {
+    color: var(--text-placeholder);
+  }
+}
+
+// 选择器样式
+.ant-select {
+  .ant-select-selector {
+    background: var(--input-bg) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+  }
+
+  &.ant-select-focused .ant-select-selector {
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important;
+  }
+}
+
+// 开关样式
+.ant-switch {
+  background: var(--bg-color-secondary);
+
+  &.ant-switch-checked {
+    background: var(--primary-color);
+  }
+}
+
+// 分页样式
+.ant-pagination {
+  .ant-pagination-item {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+
+    a {
+      color: var(--text-primary);
+    }
+
+    &:hover {
+      border-color: var(--primary-color);
+
+      a {
+        color: var(--primary-color);
+      }
+    }
+
+    &.ant-pagination-item-active {
+      background: var(--primary-color);
+      border-color: var(--primary-color);
+
+      a {
+        color: white;
+      }
+    }
+  }
+
+  .ant-pagination-prev,
+  .ant-pagination-next {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+
+    .ant-pagination-item-link {
+      background: transparent;
+      color: var(--text-primary);
+    }
+
+    &:hover {
+      border-color: var(--primary-color);
+
+      .ant-pagination-item-link {
+        color: var(--primary-color);
+      }
+    }
+  }
+}

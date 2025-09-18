@@ -1,0 +1,119 @@
+// 颜色变量
+$primary-color: #1890ff;
+$success-color: #52c41a;
+$warning-color: #faad14;
+$error-color: #ff4d4f;
+$info-color: #1890ff;
+
+// 深色主题颜色
+$bg-color: #0a0a0a;
+$bg-color-light: #141414;
+$bg-color-lighter: #1f1f1f;
+$bg-color-card: #1f1f1f;
+
+// 文字颜色
+$text-color: rgba(255, 255, 255, 0.85);
+$text-color-secondary: rgba(255, 255, 255, 0.65);
+$text-color-disabled: rgba(255, 255, 255, 0.25);
+
+// 边框颜色
+$border-color: rgba(255, 255, 255, 0.12);
+$border-color-light: rgba(255, 255, 255, 0.06);
+$border-color-dark: rgba(255, 255, 255, 0.2);
+
+// 阴影
+$box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+$box-shadow-light: 0 1px 4px rgba(0, 0, 0, 0.1);
+$box-shadow-heavy: 0 4px 16px rgba(0, 0, 0, 0.25);
+
+// 圆角
+$border-radius: 8px;
+$border-radius-small: 4px;
+$border-radius-large: 12px;
+
+// 间距
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 16px;
+$spacing-lg: 24px;
+$spacing-xl: 32px;
+$spacing-xxl: 48px;
+
+// 字体大小
+$font-size-xs: 12px;
+$font-size-sm: 14px;
+$font-size-md: 16px;
+$font-size-lg: 18px;
+$font-size-xl: 20px;
+$font-size-xxl: 24px;
+
+// 字体权重
+$font-weight-normal: 400;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+$font-weight-bold: 700;
+
+// 行高
+$line-height-sm: 1.2;
+$line-height-md: 1.5;
+$line-height-lg: 1.8;
+
+// 布局
+$header-height: 64px;
+$sidebar-width: 240px;
+$sidebar-collapsed-width: 80px;
+
+// 响应式断点
+$breakpoint-xs: 480px;
+$breakpoint-sm: 768px;
+$breakpoint-md: 992px;
+$breakpoint-lg: 1200px;
+$breakpoint-xl: 1600px;
+
+// 动画
+$transition-fast: 0.15s;
+$transition-normal: 0.3s;
+$transition-slow: 0.5s;
+
+$ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+$ease-out: cubic-bezier(0, 0, 0.2, 1);
+$ease-in: cubic-bezier(0.4, 0, 1, 1);
+
+// Z-index 层级
+$z-index-dropdown: 1000;
+$z-index-sticky: 1020;
+$z-index-fixed: 1030;
+$z-index-modal-backdrop: 1040;
+$z-index-modal: 1050;
+$z-index-popover: 1060;
+$z-index-tooltip: 1070;
+
+// 特殊颜色
+$gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+$gradient-success: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+$gradient-warning: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+$gradient-error: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+
+// 图表颜色
+$chart-colors: (
+  #1890ff,
+  #52c41a,
+  #faad14,
+  #f5222d,
+  #722ed1,
+  #fa8c16,
+  #13c2c2,
+  #eb2f96,
+  #a0d911,
+  #1890ff
+);
+
+// 状态颜色
+$status-colors: (
+  'buy': #52c41a,
+  'sell': #f5222d,
+  'hold': #faad14,
+  'up': #52c41a,
+  'down': #f5222d,
+  'neutral': #8c8c8c
+);
