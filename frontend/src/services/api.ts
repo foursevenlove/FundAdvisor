@@ -208,6 +208,7 @@ export class ApiService {
 
   static async getFundById(fundId: string): Promise<Fund> {
     const response = await apiClient.get(`/api/v1/funds/${fundId}/detail`)
+    // The backend returns a FundDetailResponse object, we need to extract fund_info from it
     return response.data.fund_info
   }
 
@@ -226,7 +227,8 @@ export class ApiService {
     const response = await apiClient.get(`/api/v1/funds/${fundId}/net-values`, {
       params: { start_date: startDate, end_date: endDate }
     })
-    return response.data.data
+    // The backend returns an array directly, not wrapped in a data object
+    return response.data
   }
 
   // 关注列表相关
