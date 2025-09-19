@@ -207,8 +207,8 @@ export class ApiService {
   }
 
   static async getFundById(fundId: string): Promise<Fund> {
-    const response = await apiClient.get(`/api/v1/funds/${fundId}/info`)
-    return response.data
+    const response = await apiClient.get(`/api/v1/funds/${fundId}/detail`)
+    return response.data.fund_info
   }
 
   static async searchFunds(query: string, limit = 10): Promise<FundSearchResult[]> {

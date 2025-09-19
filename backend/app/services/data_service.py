@@ -248,29 +248,40 @@ class DataService:
             # 获取或创建基金记录
             fund = db.query(Fund).filter(Fund.code == fund_code).first()
             
+            fund_info = self.get_fund_info(fund_code)
+            if not fund_info:
+                return False
+
             if not fund:
-                # 获取基金基本信息
-                fund_info = self.get_fund_info(fund_code)
-                if not fund_info:
-                    return False
-                
                 # 创建新基金记录
                 fund = Fund(
                     code=fund_info['code'],
                     name=fund_info['name'],
                     fund_type=fund_info['type'],
                     manager=fund_info['manager'],
-                    company=fund_info['company']
+                    company=fund_info['company'],
+                    establish_date=fund_info.get('establish_date'),
+                    scale=fund_info.get('scale')
                 )
                 db.add(fund)
                 db.commit()
                 db.refresh(fund)
-            
+            else:
+                # 更新已有基金信息
+                fund.name = fund_info['name']
+                fund.fund_type = fund_info['type']
+                fund.manager = fund_info['manager']
+                fund.company = fund_info['company']
+                fund.establish_date = fund_info.get('establish_date')
+                fund.scale = fund_info.get('scale')
+
             # 获取最新净值数据
             net_values = self.get_fund_net_value(fund_code)
             
             if not net_values:
-                return False
+                # 即使没有净值数据，也认为基础数据更新成功
+                db.commit()
+                return True
             
             # 获取数据库中最新的净值日期
             latest_db_date = db.query(FundNetValue.date).filter(
@@ -282,7 +293,7 @@ class DataService:
             # 插入新的净值数据
             new_records = 0
             for nv in net_values:
-                nv_date = datetime.strptime(nv['date'], '%Y-%m-%d')
+                nv_date = datetime.strptime(nv['date'], '%Y-%m-%d').date()
                 
                 # 只插入新数据
                 if not latest_date or nv_date > latest_date:
@@ -296,9 +307,16 @@ class DataService:
                     db.add(net_value_record)
                     new_records += 1
             
+            # 如果有新记录，更新基金主表信息
             if new_records > 0:
-                db.commit()
-                logger.info(f"更新基金 {fund_code} 数据，新增 {new_records} 条记录")
+                latest_nv = max(net_values, key=lambda x: x['date'])
+                fund.current_nav = latest_nv['net_value']
+                fund.accumulated_nav = latest_nv['accumulated_value']
+                fund.daily_return = latest_nv['daily_return']
+                fund.updated_at = datetime.now()
+
+            db.commit()
+            logger.info(f"更新基金 {fund_code} 数据，新增 {new_records} 条记录")
             
             return True
             

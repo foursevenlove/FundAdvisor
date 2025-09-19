@@ -1,8 +1,9 @@
 """
 核心配置文件
 """
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
-from typing import Optional
+from typing import Optional, Union, List
 import os
 
 
@@ -18,7 +19,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     
     # 数据库配置
-    DATABASE_URL: str = "postgresql://postgres:foursevenlove@localhost:5432/fundadvisor"
+    DATABASE_URL: str = "postgresql://foursevenlove:foursevenlove@localhost:5432/fundadvisor"
     
     # Redis 配置
     REDIS_URL: str = "redis://localhost:6379/0"
@@ -29,7 +30,13 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
     # CORS 配置
-    BACKEND_CORS_ORIGINS: list = ["http://localhost:3000","http://localhost:3001/", "http://localhost:8080"]
+    CORS_ORIGINS: List[str] = []
+
+    @field_validator("CORS_ORIGINS", mode='before')
+    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
+        if isinstance(v, str) and not v.startswith("["):
+            return [i.strip() for i in v.split(",")]
+        return v
     
     # akshare 数据更新配置
     DATA_UPDATE_INTERVAL: int = 300  # 5分钟更新一次

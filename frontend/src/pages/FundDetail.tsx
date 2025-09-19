@@ -4,7 +4,7 @@ import { Card, Row, Col, Typography, Space, Tag, Button, Statistic, Tabs, Table,
 import { ArrowUp, ArrowDown, Star, TrendingUp, Calendar, User, Building } from 'lucide-react'
 import { motion } from 'framer-motion'
 import ReactECharts from 'echarts-for-react'
-import ApiService from '../services/api'
+import ApiService, { FundNavHistory } from '../services/api'
 
 const { Title, Text, Paragraph } = Typography
 const { TabPane } = Tabs
@@ -32,6 +32,7 @@ interface PerformanceData {
 const FundDetail: React.FC = () => {
   const { code } = useParams<{ code: string }>()
   const [fundInfo, setFundInfo] = useState<FundInfo | null>(null)
+  const [navHistory, setNavHistory] = useState<FundNavHistory[]>([])
   const [loading, setLoading] = useState(true)
   const [isWatched, setIsWatched] = useState(false)
 
@@ -44,8 +45,11 @@ const FundDetail: React.FC = () => {
 
       try {
         setLoading(true)
-        // 尝试通过基金代码获取基金信息
-        const fund = await ApiService.getFundById(code)
+        // 并行获取基金信息和历史净值
+        const [fund, history] = await Promise.all([
+          ApiService.getFundById(code),
+          ApiService.getFundNavHistory(code)
+        ])
 
         // 转换API数据格式到组件使用的格式
         const fundData: FundInfo = {
@@ -63,6 +67,7 @@ const FundDetail: React.FC = () => {
         }
 
         setFundInfo(fundData)
+        setNavHistory(history)
       } catch (error) {
         console.error('获取基金详情失败:', error)
         message.error('获取基金详情失败，请检查基金代码是否正确')
@@ -91,22 +96,10 @@ const FundDetail: React.FC = () => {
     fetchFundDetail()
   }, [code])
 
-  // 模拟历史净值数据
+  // 生成历史净值图表配置
   const getHistoryChartOption = () => {
-    const dates = []
-    const values = []
-    const baseValue = 1.0
-    
-    for (let i = 0; i < 365; i++) {
-      const date = new Date()
-      date.setDate(date.getDate() - (365 - i))
-      dates.push(date.toISOString().split('T')[0])
-      
-      // 模拟净值波动
-      const randomChange = (Math.random() - 0.5) * 0.02
-      const value: number = i === 0 ? baseValue : values[i - 1] * (1 + randomChange)
-      values.push(Number(value.toFixed(4)))
-    }
+    const dates = navHistory.map(item => item.date)
+    const values = navHistory.map(item => item.unit_nav)
 
     return {
       title: {
@@ -144,13 +137,15 @@ const FundDetail: React.FC = () => {
       },
       yAxis: {
         type: 'value',
+        scale: true,
         axisLine: {
           lineStyle: {
             color: '#333'
           }
         },
         axisLabel: {
-          color: '#999'
+          color: '#999',
+          formatter: (value: number) => value.toFixed(4)
         },
         splitLine: {
           lineStyle: {
@@ -160,7 +155,7 @@ const FundDetail: React.FC = () => {
       },
       series: [
         {
-          name: '净值',
+          name: '单位净值',
           type: 'line',
           data: values,
           smooth: true,

@@ -1,6 +1,7 @@
 """
 基金相关 API 端点
 """
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -285,7 +286,7 @@ async def get_fund_detail(
             data = pd.DataFrame([
                 {
                     'date': nv.date,
-                    'net_value': nv.net_value,
+                    'unit_nav': nv.net_value,
                     'daily_return': nv.daily_return or 0,
                     'volume': nv.volume or 0
                 }
@@ -327,6 +328,7 @@ async def get_fund_detail(
     except HTTPException:
         raise
     except Exception as e:
+        logging.exception(f"获取基金详情失败: fund_code={fund_code}")
         raise HTTPException(status_code=500, detail=f"获取基金详情失败: {str(e)}")
 
 
