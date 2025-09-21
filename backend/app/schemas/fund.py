@@ -1,7 +1,7 @@
 """
 基金相关的 Pydantic 模型
 """
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from enum import Enum
@@ -39,7 +39,7 @@ class FundUpdate(BaseModel):
 class FundInfo(FundBase):
     """基金信息响应模型"""
     id: int
-    establish_date: Optional[str] = None  # 修改为字符串类型
+    establish_date: Optional[str] = None
     scale: Optional[float] = Field(None, description="基金规模(亿元)")
     current_nav: Optional[float] = Field(None, description="当前净值")
     accumulated_nav: Optional[float] = Field(None, description="累计净值")
@@ -50,6 +50,15 @@ class FundInfo(FundBase):
 
     class Config:
         from_attributes = True
+
+    @field_validator('establish_date', mode='before')
+    def _normalize_establish_date(cls, value):  # noqa: D401 - simple normalization
+        if value is None:
+            return None
+        if isinstance(value, datetime):
+            return value.strftime('%Y-%m-%d')
+        value_str = str(value).strip()
+        return value_str or None
 
 
 class FundNetValueBase(BaseModel):

@@ -4,8 +4,9 @@
 import akshare as ak
 import pandas as pd
 from datetime import datetime, timedelta
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Iterable, Any
 import logging
+import re
 from sqlalchemy.orm import Session
 from ..models import Fund, FundNetValue
 from ..core.database import get_db
@@ -92,49 +93,71 @@ class DataService:
                 logger.warning(f"基金 {fund_code} 基本信息为空")
                 return None
 
-            info = fund_info.iloc[0]
+            info_map = self._normalize_basic_info_frame(fund_info)
 
-            # 安全获取字段值，确保兼容不同的数据格式
-            def safe_get(data, key, default=''):
-                """安全获取字典或Series中的值"""
-                try:
-                    if hasattr(data, 'get'):
-                        return data.get(key, default)
-                    elif hasattr(data, key):
-                        return getattr(data, key, default)
-                    else:
-                        return default
-                except:
-                    return default
+            if not info_map:
+                logger.warning(f"基金 {fund_code} 基本信息解析失败")
+                return None
 
-            # 处理基金规模（转换为数字）
-            scale_value = safe_get(info, '基金规模', 0)
-            if isinstance(scale_value, str):
-                # 移除"亿元"等文字，只保留数字
-                import re
-                scale_match = re.search(r'(\d+\.?\d*)', str(scale_value))
-                scale_value = float(scale_match.group(1)) * 100000000 if scale_match else 0
+            def pick_value(keys: Iterable[str], default: Optional[str] = '') -> Optional[str]:
+                """按照给定字段候选列表返回首个合法值"""
+                for key in keys:
+                    value = info_map.get(key)
+                    if value is None:
+                        continue
+                    if isinstance(value, float) and pd.isna(value):
+                        continue
+                    value_str = str(value).strip()
+                    if value_str and value_str.lower() not in {'nan', 'none', '<na>'}:
+                        return value_str
+                return default
 
-            def normalize(value, default):
-                if value is None:
-                    return default
-                if isinstance(value, float) and pd.isna(value):
-                    return default
-                value_str = str(value).strip()
-                return value_str or default
+            def normalize_scale(raw_scale) -> Optional[float]:
+                if raw_scale is None:
+                    return None
+                if isinstance(raw_scale, (int, float)):
+                    if isinstance(raw_scale, float) and pd.isna(raw_scale):
+                        return None
+                    return float(raw_scale)
 
-            raw_name = safe_get(info, '基金名称') or safe_get(info, '基金简称')
-            raw_type = safe_get(info, '基金类型') or safe_get(info, '类型')
+                raw_str = str(raw_scale).strip()
+                if not raw_str or raw_str in {'--', 'nan', 'None'}:
+                    return None
+
+                match = re.search(r'([-+]?\d+(?:\.\d+)?)', raw_str)
+                if not match:
+                    return None
+
+                number = float(match.group(1))
+                multiplier = 1
+                if '万亿' in raw_str:
+                    multiplier = 1_0000_0000_0000
+                elif '亿' in raw_str:
+                    multiplier = 100_000_000
+                elif '万' in raw_str:
+                    multiplier = 10_000
+                return number * multiplier
+
+            raw_name = pick_value(('基金名称', '基金简称', '基金全称'), default=f'基金{fund_code}')
+            raw_type = pick_value(('基金类型', '类型'), default='混合型')
+            raw_manager = pick_value(('基金经理', '现任基金经理', '基金经理人'), default='未知基金经理')
+            raw_company = pick_value(('基金公司', '基金管理人', '基金管理公司'), default='未知基金公司')
+            raw_description = pick_value(('投资目标', '投资策略', '基金特色', '基金简介'), default='暂无描述信息')
+
+            scale_value = normalize_scale(pick_value(('基金规模', '最新规模', '资产规模', '基金资产规模'), default=None))
+            if scale_value is None:
+                scale_value = 0
+            establish_date = pick_value(('成立时间', '成立日期'), default='')
 
             result = {
                 'code': fund_code,
-                'name': normalize(raw_name, f'基金{fund_code}'),
-                'fund_type': normalize(raw_type, '混合型'),
-                'manager': normalize(safe_get(info, '基金经理', '未知基金经理'), '未知基金经理'),
-                'company': normalize(safe_get(info, '基金公司', '未知基金公司'), '未知基金公司'),
-                'establish_date': normalize(safe_get(info, '成立时间', ''), ''),
+                'name': raw_name,
+                'fund_type': raw_type,
+                'manager': raw_manager,
+                'company': raw_company,
+                'establish_date': establish_date,
                 'scale': scale_value,
-                'description': normalize(safe_get(info, '投资目标', '暂无描述信息'), '暂无描述信息')
+                'description': raw_description
             }
 
             logger.info(f"成功获取基金 {fund_code} 基本信息")
@@ -294,7 +317,7 @@ class DataService:
     def get_fund_realtime_data(self, fund_code: str) -> Optional[Dict]:
         """
         获取基金实时数据
-        
+
         Args:
             fund_code: 基金代码
             
@@ -324,11 +347,80 @@ class DataService:
         except Exception as e:
             logger.error(f"获取实时数据失败 {fund_code}: {e}")
             return None
-    
+
+    @staticmethod
+    def _normalize_basic_info_frame(fund_info: pd.DataFrame) -> Dict[str, Any]:
+        """将不同结构的基金基本信息 DataFrame 统一为字典格式"""
+        if fund_info is None or fund_info.empty:
+            return {}
+
+        def _drop_invalid(value_map: Dict) -> Dict[str, Any]:
+            cleaned = {}
+            for key, value in value_map.items():
+                if key is None:
+                    continue
+                key_str = str(key).strip()
+                if not key_str:
+                    continue
+                if isinstance(value, float) and pd.isna(value):
+                    continue
+                cleaned[key_str] = value
+            return cleaned
+
+        # 情况1：单行多列，直接按列名展开
+        if fund_info.shape[0] == 1 and fund_info.shape[1] > 1:
+            return _drop_invalid(fund_info.iloc[0].to_dict())
+
+        # 情况2：包含字段列和值列
+        alias_pairs = [
+            ('item', 'value'),
+            ('项目', '值'),
+            ('字段', '值'),
+            ('指标', '数值'),
+            ('指标', '值'),
+            ('名称', '内容')
+        ]
+        for key_col, value_col in alias_pairs:
+            if key_col in fund_info.columns and value_col in fund_info.columns:
+                subset = fund_info[[key_col, value_col]].dropna(subset=[key_col])
+                mapping = {
+                    str(row[key_col]).strip(): row[value_col]
+                    for _, row in subset.iterrows()
+                    if str(row[key_col]).strip()
+                }
+                if mapping:
+                    return _drop_invalid(mapping)
+
+        # 情况3：两列结构，默认第一列为字段，第二列为值
+        if fund_info.shape[1] == 2:
+            first_col, second_col = fund_info.columns[:2]
+            subset = fund_info[[first_col, second_col]].dropna(subset=[first_col])
+            mapping = {
+                str(row[first_col]).strip(): row[second_col]
+                for _, row in subset.iterrows()
+                if str(row[first_col]).strip()
+            }
+            if mapping:
+                return _drop_invalid(mapping)
+
+        # 情况4：单列但索引包含字段
+        if fund_info.shape[1] == 1:
+            series = fund_info.iloc[:, 0]
+            mapping = {
+                str(idx).strip(): series.iloc[pos]
+                for pos, idx in enumerate(series.index)
+                if str(idx).strip()
+            }
+            if mapping:
+                return _drop_invalid(mapping)
+
+        # 兜底：使用首行展开
+        return _drop_invalid(fund_info.iloc[0].to_dict())
+
     def _get_fund_list(self) -> pd.DataFrame:
         """
         获取基金列表（带缓存）
-        
+
         Returns:
             基金列表 DataFrame
         """

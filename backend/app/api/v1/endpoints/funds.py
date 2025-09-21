@@ -328,7 +328,7 @@ async def get_fund_detail(
         fund_info = None
 
         placeholder_name = f"基金{fund_code}"
-        if (not fund or not fund.name or fund.name == placeholder_name):
+        if not fund or not fund.name or fund.name == placeholder_name:
             # 如果基金不存在或者数据为空，尝试更新数据
             success = data_service.update_fund_data(db, fund_code)
             if success:
@@ -337,6 +337,7 @@ async def get_fund_detail(
         if fund and fund.name:
             # 如果有真实数据，使用真实数据并填充缺失字段
             fund_info = FundInfo.model_validate(fund)
+            logging.info("fund_info: %s", fund_info)
             fund_info.manager = fund_info.manager or "未知基金经理"
             fund_info.company = fund_info.company or "未知基金公司"
             fund_info.description = fund_info.description or "暂无描述信息"
