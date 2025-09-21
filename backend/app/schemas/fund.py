@@ -39,30 +39,33 @@ class FundUpdate(BaseModel):
 class FundInfo(FundBase):
     """基金信息响应模型"""
     id: int
-    establish_date: Optional[datetime] = None
+    establish_date: Optional[str] = None  # 修改为字符串类型
     scale: Optional[float] = Field(None, description="基金规模(亿元)")
-    created_at: datetime
+    current_nav: Optional[float] = Field(None, description="当前净值")
+    accumulated_nav: Optional[float] = Field(None, description="累计净值")
+    daily_return: Optional[float] = Field(None, description="日收益率")
+    description: Optional[str] = Field(None, description="基金描述")
+    created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-    
+
     class Config:
         from_attributes = True
 
 
 class FundNetValueBase(BaseModel):
     """基金净值基础模型"""
-    date: datetime = Field(..., description="净值日期")
-    net_value: float = Field(..., description="单位净值")
-    accumulated_value: Optional[float] = Field(None, description="累计净值")
+    date: str = Field(..., description="净值日期")  # 修改为字符串类型
+    unit_nav: float = Field(..., description="单位净值")  # 修改字段名
+    accumulated_nav: Optional[float] = Field(None, description="累计净值")  # 修改字段名
     daily_return: Optional[float] = Field(None, description="日收益率")
-    volume: Optional[float] = Field(None, description="成交量")
 
 
 class FundNetValue(FundNetValueBase):
     """基金净值响应模型"""
-    id: int
-    fund_id: int
-    created_at: datetime
-    
+    id: Optional[int] = None
+    fund_id: Optional[int] = None
+    created_at: Optional[datetime] = None
+
     class Config:
         from_attributes = True
 

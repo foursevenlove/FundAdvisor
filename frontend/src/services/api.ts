@@ -227,8 +227,17 @@ export class ApiService {
     const response = await apiClient.get(`/api/v1/funds/${fundId}/net-values`, {
       params: { start_date: startDate, end_date: endDate }
     })
-    // The backend returns an array directly, not wrapped in a data object
-    return response.data
+    // 确保数据格式正确映射
+    const rawData = response.data
+    if (Array.isArray(rawData)) {
+      return rawData.map(item => ({
+        date: item.date,
+        unit_nav: item.unit_nav || item.net_value,
+        accumulated_nav: item.accumulated_nav || item.accumulated_value,
+        daily_return: item.daily_return
+      }))
+    }
+    return []
   }
 
   // 关注列表相关
