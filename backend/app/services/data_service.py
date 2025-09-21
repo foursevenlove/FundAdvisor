@@ -9,6 +9,7 @@ import logging
 from sqlalchemy.orm import Session
 from ..models import Fund, FundNetValue
 from ..core.database import get_db
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -116,11 +117,11 @@ class DataService:
 
             result = {
                 'code': fund_code,
-                'name': safe_get(info, '基金简称', f'基金{fund_code}'),
+                'name': safe_get(info, '基金名称', f'基金{fund_code}'),
                 'fund_type': safe_get(info, '基金类型', '混合型'),
                 'manager': safe_get(info, '基金经理', ''),
                 'company': safe_get(info, '基金公司', ''),
-                'establish_date': safe_get(info, '成立日期', ''),
+                'establish_date': safe_get(info, '成立时间', ''),
                 'scale': scale_value,
                 'description': safe_get(info, '投资目标', '暂无描述信息')
             }
@@ -169,7 +170,7 @@ class DataService:
 
             # 获取基金净值数据
             net_value_data = ak.fund_open_fund_info_em(
-                fund=fund_code,
+                symbol=fund_code,
                 indicator="单位净值走势"
             )
 
@@ -248,7 +249,7 @@ class DataService:
                 # 跳过周末
                 if current_date.weekday() < 5:
                     # 生成随机变化（-2% 到 +2%）
-                    change_pct = (pd.np.random.random() - 0.5) * 0.04
+                    change_pct = (np.random.random() - 0.5) * 0.04
                     base_value *= (1 + change_pct)
 
                     results.append({
@@ -280,7 +281,7 @@ class DataService:
         try:
             # 获取实时净值
             realtime_data = ak.fund_open_fund_info_em(
-                fund=fund_code, 
+                symbol=fund_code, 
                 indicator="实时估值"
             )
             
@@ -352,6 +353,11 @@ class DataService:
             if not fund_info:
                 return False
 
+            # Convert empty string establish_date to None
+            establish_date_value = fund_info.get('establish_date')
+            if establish_date_value == '':
+                establish_date_value = None
+
             if not fund:
                 # 创建新基金记录
                 fund = Fund(
@@ -360,7 +366,7 @@ class DataService:
                     fund_type=fund_info['fund_type'],
                     manager=fund_info['manager'],
                     company=fund_info['company'],
-                    establish_date=fund_info.get('establish_date'),
+                    establish_date=establish_date_value,
                     scale=fund_info.get('scale'),
                     description=fund_info.get('description', '')
                 )
@@ -373,7 +379,7 @@ class DataService:
                 fund.fund_type = fund_info['fund_type']
                 fund.manager = fund_info['manager']
                 fund.company = fund_info['company']
-                fund.establish_date = fund_info.get('establish_date')
+                fund.establish_date = establish_date_value
                 fund.scale = fund_info.get('scale')
                 fund.description = fund_info.get('description', '')
 

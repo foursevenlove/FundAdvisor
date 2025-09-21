@@ -176,7 +176,15 @@ async def get_fund_net_values(
             mock_data.reverse()
             return mock_data
 
-        return [FundNetValueSchema.model_validate(nv) for nv in net_values]
+        return [
+            FundNetValueSchema(
+                date=nv.date.strftime('%Y-%m-%d'),
+                unit_nav=nv.net_value,
+                accumulated_nav=nv.accumulated_value,
+                daily_return=nv.daily_return
+            )
+            for nv in net_values
+        ]
 
     except HTTPException:
         raise
@@ -377,7 +385,15 @@ async def get_fund_detail(
 
             net_values_list = mock_nav_data
         else:
-            net_values_list = [FundNetValueSchema.model_validate(nv) for nv in net_values]
+            net_values_list = [
+                FundNetValueSchema(
+                    date=nv.date.strftime('%Y-%m-%d'),
+                    unit_nav=nv.net_value,
+                    accumulated_nav=nv.accumulated_value,
+                    daily_return=nv.daily_return
+                )
+                for nv in net_values
+            ]
 
         # 策略分析
         strategy_signals = {}
