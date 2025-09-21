@@ -41,6 +41,9 @@ CREATE TABLE IF NOT EXISTS funds (
     company VARCHAR(200),
     establish_date DATE,
     scale DECIMAL(15, 2),
+    current_nav DECIMAL(10, 4),
+    accumulated_nav DECIMAL(10, 4),
+    daily_return DECIMAL(8, 4),
     description TEXT,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -157,6 +160,12 @@ INSERT INTO funds (code, name, fund_type, manager, company, establish_date, desc
 ('161725', '招商中证白酒指数', '指数型', '王五', '招商基金管理有限公司', '2015-05-27', '本基金跟踪中证白酒指数，投资于白酒行业相关股票'),
 ('519066', '汇添富蓝筹稳健混合', '混合型', '赵六', '汇添富基金管理股份有限公司', '2007-03-12', '本基金主要投资于蓝筹股，追求稳健的长期回报')
 ON CONFLICT (code) DO NOTHING;
+
+UPDATE funds
+SET
+    manager = COALESCE(NULLIF(manager, ''), '未知基金经理'),
+    company = COALESCE(NULLIF(company, ''), '未知基金公司'),
+    description = COALESCE(NULLIF(description, ''), '暂无描述信息');
 
 -- 插入示例净值数据
 INSERT INTO fund_nav_history (fund_id, nav_date, unit_nav, accumulated_nav, daily_return)

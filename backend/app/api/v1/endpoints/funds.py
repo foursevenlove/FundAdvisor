@@ -23,6 +23,32 @@ from ....schemas import (
 router = APIRouter()
 
 
+# 工具函数：将策略指标转换为原生类型，防止Pydantic序列化报错
+def _sanitize_value(value):
+    """递归地将 NumPy/pandas 标量转换为 Python 内置类型"""
+    if isinstance(value, dict):
+        return {key: _sanitize_value(val) for key, val in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [_sanitize_value(item) for item in value]
+    if hasattr(value, 'item'):
+        try:
+            return value.item()
+        except Exception:  # pragma: no cover - 防御性处理
+            pass
+    return value
+
+
+def _build_strategy_response(signal):
+    """将策略信号转换为API响应模型，同时清理指标值"""
+    return StrategySignalResponse(
+        signal_type=signal.signal_type,
+        strength=float(signal.strength),
+        reason=signal.reason,
+        indicators=_sanitize_value(getattr(signal, 'indicators', {})),
+        timestamp=signal.timestamp
+    )
+
+
 @router.get("/search", response_model=List[FundSearchResult])
 async def search_funds(
     q: str = Query(..., description="搜索关键词（基金代码或名称）"),
@@ -250,24 +276,12 @@ async def analyze_fund_strategy(
             # 分析指定策略
             signal = strategy_manager.calculate_signal(request.strategy_name, data)
             if signal:
-                signals[request.strategy_name] = StrategySignalResponse(
-                    signal_type=signal.signal_type,
-                    strength=signal.strength,
-                    reason=signal.reason,
-                    indicators=signal.indicators,
-                    timestamp=signal.timestamp
-                )
+                signals[request.strategy_name] = _build_strategy_response(signal)
         else:
             # 分析所有策略
             all_signals = strategy_manager.calculate_all_signals(data)
             for name, signal in all_signals.items():
-                signals[name] = StrategySignalResponse(
-                    signal_type=signal.signal_type,
-                    strength=signal.strength,
-                    reason=signal.reason,
-                    indicators=signal.indicators,
-                    timestamp=signal.timestamp
-                )
+                signals[name] = _build_strategy_response(signal)
         
         # 获取综合信号
         consensus_signal = None
@@ -275,9 +289,9 @@ async def analyze_fund_strategy(
             consensus = strategy_manager.get_consensus_signal(data)
             consensus_signal = StrategySignalResponse(
                 signal_type=consensus.signal_type,
-                strength=consensus.strength,
+                strength=float(consensus.strength),
                 reason=consensus.reason,
-                indicators=consensus.indicators,
+                indicators=_sanitize_value(consensus.indicators),
                 timestamp=consensus.timestamp
             )
         
@@ -313,15 +327,19 @@ async def get_fund_detail(
 
         fund_info = None
 
-        if not fund or not fund.name:
+        placeholder_name = f"基金{fund_code}"
+        if (not fund or not fund.name or fund.name == placeholder_name):
             # 如果基金不存在或者数据为空，尝试更新数据
             success = data_service.update_fund_data(db, fund_code)
             if success:
                 fund = db.query(Fund).filter(Fund.code == fund_code).first()
 
         if fund and fund.name:
-            # 如果有真实数据，使用真实数据
+            # 如果有真实数据，使用真实数据并填充缺失字段
             fund_info = FundInfo.model_validate(fund)
+            fund_info.manager = fund_info.manager or "未知基金经理"
+            fund_info.company = fund_info.company or "未知基金公司"
+            fund_info.description = fund_info.description or "暂无描述信息"
         else:
             # 使用模拟数据
             fund_info = FundInfo(
@@ -404,6 +422,7 @@ async def get_fund_detail(
                 {
                     'date': nv.date,
                     'unit_nav': nv.unit_nav,
+                    'net_value': nv.unit_nav,
                     'daily_return': nv.daily_return or 0,
                     'volume': 1000000  # 模拟成交量
                 }
@@ -413,24 +432,18 @@ async def get_fund_detail(
             try:
                 all_signals = strategy_manager.calculate_all_signals(data)
                 for name, signal in all_signals.items():
-                    strategy_signals[name] = StrategySignalResponse(
-                        signal_type=signal.signal_type,
-                        strength=signal.strength,
-                        reason=signal.reason,
-                        indicators=signal.indicators,
-                        timestamp=signal.timestamp
-                    )
+                    strategy_signals[name] = _build_strategy_response(signal)
 
                 # 获取综合信号
                 if len(strategy_signals) > 1:
                     consensus = strategy_manager.get_consensus_signal(data)
                     consensus_signal = StrategySignalResponse(
-                        signal_type=consensus.signal_type,
-                        strength=consensus.strength,
-                        reason=consensus.reason,
-                        indicators=consensus.indicators,
-                        timestamp=consensus.timestamp
-                    )
+                signal_type=consensus.signal_type,
+                strength=float(consensus.strength),
+                reason=consensus.reason,
+                indicators=_sanitize_value(consensus.indicators),
+                timestamp=consensus.timestamp
+            )
             except:
                 pass  # 策略分析失败不影响其他数据
 

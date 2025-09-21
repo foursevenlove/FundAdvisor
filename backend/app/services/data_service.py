@@ -115,15 +115,26 @@ class DataService:
                 scale_match = re.search(r'(\d+\.?\d*)', str(scale_value))
                 scale_value = float(scale_match.group(1)) * 100000000 if scale_match else 0
 
+            def normalize(value, default):
+                if value is None:
+                    return default
+                if isinstance(value, float) and pd.isna(value):
+                    return default
+                value_str = str(value).strip()
+                return value_str or default
+
+            raw_name = safe_get(info, '基金名称') or safe_get(info, '基金简称')
+            raw_type = safe_get(info, '基金类型') or safe_get(info, '类型')
+
             result = {
                 'code': fund_code,
-                'name': safe_get(info, '基金名称', f'基金{fund_code}'),
-                'fund_type': safe_get(info, '基金类型', '混合型'),
-                'manager': safe_get(info, '基金经理', ''),
-                'company': safe_get(info, '基金公司', ''),
-                'establish_date': safe_get(info, '成立时间', ''),
+                'name': normalize(raw_name, f'基金{fund_code}'),
+                'fund_type': normalize(raw_type, '混合型'),
+                'manager': normalize(safe_get(info, '基金经理', '未知基金经理'), '未知基金经理'),
+                'company': normalize(safe_get(info, '基金公司', '未知基金公司'), '未知基金公司'),
+                'establish_date': normalize(safe_get(info, '成立时间', ''), ''),
                 'scale': scale_value,
-                'description': safe_get(info, '投资目标', '暂无描述信息')
+                'description': normalize(safe_get(info, '投资目标', '暂无描述信息'), '暂无描述信息')
             }
 
             logger.info(f"成功获取基金 {fund_code} 基本信息")
@@ -132,12 +143,24 @@ class DataService:
         except Exception as e:
             logger.error(f"获取基金信息失败 {fund_code}: {e}")
             # 返回基础模拟数据，确保不会完全失败
+            fallback_info = self._get_fund_list()
+            fallback_name = f'基金{fund_code}'
+            fallback_type = '混合型'
+            fallback_manager = '未知基金经理'
+            fallback_company = '未知基金公司'
+
+            if not fallback_info.empty:
+                matched = fallback_info[fallback_info['基金代码'] == fund_code]
+                if not matched.empty:
+                    fallback_name = matched.iloc[0].get('基金简称', fallback_name) or fallback_name
+                    fallback_type = matched.iloc[0].get('基金类型', fallback_type) or fallback_type
+
             return {
                 'code': fund_code,
-                'name': f'基金{fund_code}',
-                'fund_type': '混合型',
-                'manager': '基金经理',
-                'company': '基金管理公司',
+                'name': fallback_name,
+                'fund_type': fallback_type,
+                'manager': fallback_manager,
+                'company': fallback_company,
                 'establish_date': '2020-01-01',
                 'scale': 5000000000,  # 50亿
                 'description': '暂无描述信息'
@@ -357,6 +380,15 @@ class DataService:
             establish_date_value = fund_info.get('establish_date')
             if establish_date_value == '':
                 establish_date_value = None
+            if isinstance(establish_date_value, str) and establish_date_value:
+                for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%Y%m%d"):
+                    try:
+                        establish_date_value = datetime.strptime(establish_date_value, fmt)
+                        break
+                    except ValueError:
+                        continue
+                else:
+                    establish_date_value = None
 
             if not fund:
                 # 创建新基金记录
@@ -368,6 +400,9 @@ class DataService:
                     company=fund_info['company'],
                     establish_date=establish_date_value,
                     scale=fund_info.get('scale'),
+                    current_nav=fund_info.get('current_nav'),
+                    accumulated_nav=fund_info.get('accumulated_nav'),
+                    daily_return=fund_info.get('daily_return'),
                     description=fund_info.get('description', '')
                 )
                 db.add(fund)
@@ -381,6 +416,9 @@ class DataService:
                 fund.company = fund_info['company']
                 fund.establish_date = establish_date_value
                 fund.scale = fund_info.get('scale')
+                fund.current_nav = fund_info.get('current_nav')
+                fund.accumulated_nav = fund_info.get('accumulated_nav')
+                fund.daily_return = fund_info.get('daily_return')
                 fund.description = fund_info.get('description', '')
 
             # 获取最新净值数据
@@ -415,8 +453,8 @@ class DataService:
                     db.add(net_value_record)
                     new_records += 1
 
-            # 如果有新记录，更新基金主表信息
-            if new_records > 0:
+            # 更新基金主表上的最新净值信息，便于详情页展示
+            if net_values:
                 latest_nv = max(net_values, key=lambda x: x['date'])
                 fund.current_nav = latest_nv['unit_nav']  # 使用unit_nav
                 fund.accumulated_nav = latest_nv['accumulated_nav']  # 使用accumulated_nav

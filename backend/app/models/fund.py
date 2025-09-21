@@ -19,6 +19,10 @@ class Fund(Base):
     company = Column(String(100), comment="基金公司")
     establish_date = Column(DateTime, comment="成立日期")
     scale = Column(Float, comment="基金规模(亿元)")
+    current_nav = Column(Float, comment="当前净值")
+    accumulated_nav = Column(Float, comment="累计净值")
+    daily_return = Column(Float, comment="最新日收益率(%)")
+    description = Column(Text, comment="基金描述")
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
