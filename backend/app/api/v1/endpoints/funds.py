@@ -162,7 +162,7 @@ async def get_fund_net_values(
             end_dt = datetime.strptime(end_date, '%Y-%m-%d')
             query = query.filter(FundNetValue.date <= end_dt)
 
-        net_values = query.order_by(FundNetValue.date.desc()).limit(1000).all()
+        net_values = query.order_by(FundNetValue.date.asc()).limit(1000).all()
 
         if not net_values:
             # 生成模拟净值数据

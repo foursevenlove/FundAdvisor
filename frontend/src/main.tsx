@@ -51,17 +51,24 @@ const antdTheme = {
   },
 }
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <ConfigProvider 
-        locale={zhCN} 
-        theme={antdTheme}
-      >
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </ConfigProvider>
-    </QueryClientProvider>
-  </React.StrictMode>,
+const rootElement = document.getElementById('root')!
+const root = ReactDOM.createRoot(rootElement)
+
+const appTree = (
+  <QueryClientProvider client={queryClient}>
+    <ConfigProvider 
+      locale={zhCN} 
+      theme={antdTheme}
+    >
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </ConfigProvider>
+  </QueryClientProvider>
 )
+
+if (import.meta.env.PROD) {
+  root.render(<React.StrictMode>{appTree}</React.StrictMode>)
+} else {
+  root.render(appTree)
+}
