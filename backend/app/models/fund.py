@@ -56,14 +56,12 @@ class WatchList(Base):
     __tablename__ = "watchlists"
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     fund_id = Column(Integer, ForeignKey("funds.id"), nullable=False)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # 关联关系
     fund = relationship("Fund", back_populates="watchlists")
-    user = relationship("User", back_populates="watchlists")
 
 
 class Holding(Base):
@@ -71,7 +69,7 @@ class Holding(Base):
     __tablename__ = "holdings"
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    # user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     fund_id = Column(Integer, ForeignKey("funds.id"), nullable=False)
     shares = Column(Float, nullable=False, comment="持有份额")
     cost_price = Column(Float, nullable=False, comment="成本价格")
@@ -82,7 +80,7 @@ class Holding(Base):
     
     # 关联关系
     fund = relationship("Fund", back_populates="holdings")
-    user = relationship("User", back_populates="holdings")
+    # user = relationship("User", back_populates="holdings")
 
 
 class StrategySignal(Base):

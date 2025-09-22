@@ -22,7 +22,3 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     last_login = Column(DateTime(timezone=True), comment="最后登录时间")
-    
-    # 关联关系
-    watchlists = relationship("WatchList", back_populates="user")
-    holdings = relationship("Holding", back_populates="user")

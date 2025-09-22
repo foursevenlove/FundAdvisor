@@ -24,11 +24,9 @@ async def get_watchlist(
     获取用户关注列表
     """
     try:
-        user_id = 1
         watchlist_items = (
             db.query(WatchList)
             .join(Fund, WatchList.fund_id == Fund.id)
-            .filter(WatchList.user_id == user_id)
             .all()
         )
 
@@ -60,8 +58,6 @@ async def add_to_watchlist(
     添加基金到关注列表
     """
     try:
-        user_id = 1
-
         # 检查基金是否存在
         fund = db.query(Fund).filter(Fund.code == request.fund_code).first()
         if not fund:
@@ -69,7 +65,6 @@ async def add_to_watchlist(
 
         # 检查是否已经关注
         existing = db.query(WatchList).filter(
-            WatchList.user_id == user_id,
             WatchList.fund_id == fund.id
         ).first()
 
@@ -81,7 +76,6 @@ async def add_to_watchlist(
 
         # 添加到关注列表
         watchlist_item = WatchList(
-            user_id=user_id,
             fund_id=fund.id
         )
 
@@ -108,8 +102,6 @@ async def remove_from_watchlist(
     从关注列表中移除基金
     """
     try:
-        user_id = 1
-
         # 查找基金
         fund = db.query(Fund).filter(Fund.code == fund_code).first()
         if not fund:
@@ -117,7 +109,6 @@ async def remove_from_watchlist(
 
         # 查找关注项
         watchlist_item = db.query(WatchList).filter(
-            WatchList.user_id == user_id,
             WatchList.fund_id == fund.id
         ).first()
 
