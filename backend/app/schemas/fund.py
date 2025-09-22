@@ -142,7 +142,7 @@ class WatchListCreate(WatchListBase):
 
 class WatchListRequest(BaseModel):
     """关注列表请求模型"""
-    fund_id: str = Field(..., description="基金ID")
+    fund_code: str = Field(..., description="基金代码")
 
 
 class WatchListResponse(BaseModel):

@@ -246,6 +246,16 @@ export class ApiService {
     return response.data
   }
 
+  static async isFundWatched(fundCode: string): Promise<boolean> {
+    try {
+      const watchlist = await this.getWatchlist();
+      return watchlist.some(fund => fund.code === fundCode);
+    } catch (error) {
+      console.error('检查关注状态失败:', error);
+      return false;
+    }
+  }
+
   static async addToWatchlist(fundCode: string): Promise<void> {
     await apiClient.post('/api/v1/watchlist/', { fund_id: fundCode })
   }

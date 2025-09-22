@@ -45,10 +45,11 @@ const FundDetail: React.FC = () => {
 
       try {
         setLoading(true)
-        // 并行获取基金信息和历史净值
-        const [fund, history] = await Promise.all([
+        // 并行获取基金信息、历史净值和关注状态
+        const [fund, history, isWatched] = await Promise.all([
           ApiService.getFundById(code),
-          ApiService.getFundNavHistory(code)
+          ApiService.getFundNavHistory(code),
+          ApiService.isFundWatched(code)
         ])
 
         // 转换API数据格式到组件使用的格式
@@ -68,6 +69,7 @@ const FundDetail: React.FC = () => {
 
         setFundInfo(fundData)
         setNavHistory(history)
+        setIsWatched(isWatched)
       } catch (error) {
         console.error('获取基金详情失败:', error)
         message.error('获取基金详情失败，请检查基金代码是否正确')
@@ -111,6 +113,7 @@ const FundDetail: React.FC = () => {
 
         setFundInfo(fallbackFundInfo)
         setNavHistory(mockNavHistory)
+        setIsWatched(false) // 模拟数据默认未关注
       } finally {
         setLoading(false)
       }
@@ -291,6 +294,7 @@ const FundDetail: React.FC = () => {
         message.success('已取消关注')
       } else {
         await ApiService.addToWatchlist(fundInfo.code)
+          console.log("添加关注")
         message.success('已添加关注')
       }
       setIsWatched(!isWatched)
