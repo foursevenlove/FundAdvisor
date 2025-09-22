@@ -40,6 +40,13 @@ class Settings(BaseSettings):
     
     # akshare 数据更新配置
     DATA_UPDATE_INTERVAL: int = 300  # 5分钟更新一次
+
+    # 调度器与更新任务配置（允许 .env 覆盖）
+    SCHEDULER_ENABLED: bool = True
+    UPDATE_HOST: str = "127.0.0.1"
+    UPDATE_PORT: int = 8000
+    UPDATE_TIMEOUT: int = 15
+    UPDATE_CONCURRENCY: int = 8
     
     # 策略配置
     STRATEGY_CONFIG: dict = {

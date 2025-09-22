@@ -187,6 +187,16 @@ CORS_ORIGINS=http://localhost:3000,http://localhost:80
 
 # 调试模式
 DEBUG=True
+
+# 定时更新（工作日 00:00 触发，通过 HTTP 调用自身接口）
+SCHEDULER_ENABLED=true
+# 更新接口主机与端口（接口路径前缀由 API_V1_STR 控制）
+UPDATE_HOST=127.0.0.1
+UPDATE_PORT=8000
+# 单个请求超时时间（秒）
+UPDATE_TIMEOUT=15
+# 并发请求数量（建议 8~16，视后端/数据源负载调整）
+UPDATE_CONCURRENCY=8
 ```
 
 #### 前端配置
@@ -208,6 +218,13 @@ VITE_APP_TITLE=FundAdvisor
 - `GET /api/v1/funds/` - 获取基金列表
 - `GET /api/v1/funds/{fund_id}` - 获取基金详情
 - `GET /api/v1/funds/search` - 搜索基金
+- `POST ${API_V1_STR}/funds/{fund_code}/update-data` - 刷新指定基金数据（被定时任务调用）
+
+#### 定时任务说明
+- 任务时间：每个工作日 00:00 运行，自动跳过周六、周日。
+- 任务行为：读取数据库中已存在的全部基金代码，逐个通过 HTTP 调用 `POST ${API_V1_STR}/funds/{fund_code}/update-data`，以更新主表 `funds` 的 `current_nav` 以及净值历史表。
+- 可配置项：`SCHEDULER_ENABLED`、`UPDATE_BASE_URL`、`UPDATE_TIMEOUT`、`UPDATE_CONCURRENCY`。
+- 日志：任务开始/结束、成功/失败统计与失败列表会写入后端日志。
 
 #### 用户相关
 - `POST /api/v1/auth/login` - 用户登录

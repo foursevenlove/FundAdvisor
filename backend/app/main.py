@@ -11,6 +11,14 @@ from contextlib import asynccontextmanager
 from .core.config import settings
 from .core.database import engine, Base
 from .api.v1 import api_router
+import os
+from datetime import datetime
+import asyncio
+import httpx
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
+from .core.database import SessionLocal
+from .models import Fund
 
 
 # 配置日志
@@ -40,7 +48,73 @@ async def lifespan(app: FastAPI):
         logger.info(f"策略管理器初始化成功，加载策略: {list(strategy_manager.get_all_strategies().keys())}")
     except Exception as e:
         logger.error(f"策略管理器初始化失败: {e}")
-    
+
+    # 启动调度器（工作日00:00，通过HTTP调用更新数据）
+    # 使用 Settings 管理的环境变量
+    scheduler_enabled = settings.SCHEDULER_ENABLED
+    if scheduler_enabled:
+        host = settings.UPDATE_HOST
+        port = str(settings.UPDATE_PORT)
+        api_prefix = settings.API_V1_STR
+        BASE_URL = f"http://{host}:{port}{api_prefix}/funds"
+        UPDATE_TIMEOUT = float(settings.UPDATE_TIMEOUT)
+        CONCURRENCY = int(settings.UPDATE_CONCURRENCY)
+
+        async def _post_update_for_code(client: httpx.AsyncClient, fund_code: str) -> bool:
+            url = f"{BASE_URL}/{fund_code}/update-data"
+            try:
+                resp = await client.post(url, timeout=UPDATE_TIMEOUT)
+                if resp.status_code == 200:
+                    return True
+                logger.warning(f"Update failed {fund_code}: status={resp.status_code} body={resp.text[:200]}")
+                return False
+            except Exception as e:
+                logger.warning(f"Update exception {fund_code}: {e}")
+                return False
+
+        async def _run_daily_updates() -> None:
+            # 避开周末 (0=周一, 6=周日)
+            today = datetime.now()
+            if today.weekday() >= 5:
+                logger.info("Scheduler: 周末跳过基金更新")
+                return
+
+            # 读取现有全部基金代码
+            db = SessionLocal()
+            try:
+                codes = [row[0] for row in db.query(Fund.code).all()]
+            finally:
+                db.close()
+
+            if not codes:
+                logger.info("Scheduler: 没有基金需要更新")
+                return
+
+            success = 0
+            fail = 0
+            sem = asyncio.Semaphore(CONCURRENCY)
+
+            async with httpx.AsyncClient() as client:
+                async def worker(code: str):
+                    nonlocal success, fail
+                    async with sem:
+                        ok = await _post_update_for_code(client, code)
+                        if ok:
+                            success += 1
+                        else:
+                            fail += 1
+
+                tasks = [asyncio.create_task(worker(code)) for code in codes]
+                await asyncio.gather(*tasks)
+
+            logger.info(f"Scheduler: 更新完成 total={len(codes)} success={success} fail={fail}")
+
+        scheduler = AsyncIOScheduler()
+        trigger = CronTrigger(day_of_week="mon-fri", hour=0, minute=0)
+        scheduler.add_job(_run_daily_updates, trigger, id="daily_fund_updates", replace_existing=True)
+        scheduler.start()
+        logger.info("Scheduler 启动：工作日 00:00 执行基金更新任务")
+
     yield
     
     # 关闭时执行
