@@ -164,8 +164,8 @@ class HoldingBase(BaseModel):
     """持仓基础模型"""
     fund_code: str = Field(..., description="基金代码")
     shares: float = Field(..., gt=0, description="持有份额")
-    cost_price: float = Field(..., gt=0, description="成本价格")
-    purchase_date: datetime = Field(..., description="购买日期")
+    avg_cost: float = Field(..., gt=0, description="平均成本")
+    purchase_date: Optional[datetime] = Field(None, description="最近交易日期")
 
 
 class HoldingCreate(HoldingBase):
@@ -176,7 +176,7 @@ class HoldingCreate(HoldingBase):
 class HoldingUpdate(BaseModel):
     """更新持仓模型"""
     shares: Optional[float] = Field(None, gt=0)
-    cost_price: Optional[float] = Field(None, gt=0)
+    avg_cost: Optional[float] = Field(None, gt=0)
     purchase_date: Optional[datetime] = None
 
 
@@ -186,8 +186,8 @@ class HoldingResponse(BaseModel):
     fund_code: str
     fund_name: str
     shares: float
-    cost_price: float
-    purchase_date: datetime
+    avg_cost: float
+    purchase_date: Optional[datetime] = None
     current_value: Optional[float] = None
     market_value: Optional[float] = None
     profit_loss: Optional[float] = None

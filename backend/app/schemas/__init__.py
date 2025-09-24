@@ -15,6 +15,10 @@ from .fund import (
     PortfolioSummary, FundDetailResponse,
     APIResponse, PaginatedResponse, SignalTypeEnum
 )
+from .portfolio import (
+    PortfolioHolding, PortfolioSummary as PortfolioOverview,
+    PortfolioResponse, HoldingCreatePayload, HoldingUpdatePayload
+)
 
 __all__ = [
     # User schemas
@@ -29,5 +33,9 @@ __all__ = [
     "WatchListBase", "WatchListCreate", "WatchListRequest", "WatchListResponse",
     "HoldingBase", "HoldingCreate", "HoldingUpdate", "HoldingResponse",
     "PortfolioSummary", "FundDetailResponse",
-    "APIResponse", "PaginatedResponse", "SignalTypeEnum"
+    "APIResponse", "PaginatedResponse", "SignalTypeEnum",
+    
+    # Portfolio schemas
+    "PortfolioHolding", "PortfolioOverview", "PortfolioResponse",
+    "HoldingCreatePayload", "HoldingUpdatePayload"
 ]

@@ -1,9 +1,26 @@
 
 import React, { useState, useEffect } from 'react'
-import { Card, Row, Col, Typography, Space, Table, Progress, Tag, Statistic, Tabs } from 'antd'
+import {
+  Card,
+  Row,
+  Col,
+  Typography,
+  Space,
+  Table,
+  Progress,
+  Tag,
+  Statistic,
+  Tabs,
+  Empty
+} from 'antd'
 import { TrendingUp, TrendingDown } from 'lucide-react'
 import { motion } from 'framer-motion'
 import ReactECharts from 'echarts-for-react'
+import type { AxiosError } from 'axios'
+import ApiService, {
+  Holding as ApiHolding,
+  PortfolioSummary as ApiPortfolioSummary
+} from '../services/api'
 
 const { Title, Text } = Typography
 const { TabPane } = Tabs
@@ -33,76 +50,65 @@ interface PortfolioSummary {
   dayReturnPercent: number
 }
 
+const mapHolding = (holding: ApiHolding): PortfolioHolding => ({
+  id: holding.id,
+  code: holding.fund_code,
+  name: holding.fund_name,
+  type: holding.fund_type,
+  shares: holding.shares,
+  avgCost: holding.avg_cost,
+  currentValue: holding.current_value,
+  marketValue: holding.market_value,
+  totalReturn: holding.total_return,
+  totalReturnPercent: holding.total_return_percent,
+  dayReturn: holding.day_return,
+  dayReturnPercent: holding.day_return_percent,
+  weight: holding.weight
+})
+
+const mapSummary = (summary: ApiPortfolioSummary): PortfolioSummary => ({
+  totalAssets: summary.total_assets,
+  totalCost: summary.total_cost,
+  totalReturn: summary.total_return,
+  totalReturnPercent: summary.total_return_percent,
+  dayReturn: summary.day_return,
+  dayReturnPercent: summary.day_return_percent
+})
+
 const Portfolio: React.FC = () => {
   const [holdings, setHoldings] = useState<PortfolioHolding[]>([])
   const [summary, setSummary] = useState<PortfolioSummary | null>(null)
   const [loading, setLoading] = useState(true)
-
-  // 模拟投资组合数据
-  const mockHoldings: PortfolioHolding[] = [
-    {
-      id: '1',
-      code: '000001',
-      name: '华夏成长混合',
-      type: '混合型',
-      shares: 10000,
-      avgCost: 1.1500,
-      currentValue: 1.2345,
-      marketValue: 12345,
-      totalReturn: 845,
-      totalReturnPercent: 7.35,
-      dayReturn: 283,
-      dayReturnPercent: 2.34,
-      weight: 35.2
-    },
-    {
-      id: '2',
-      code: '110022',
-      name: '易方达消费行业股票',
-      type: '股票型',
-      shares: 5000,
-      avgCost: 3.2100,
-      currentValue: 3.4567,
-      marketValue: 17283.5,
-      totalReturn: 1233.5,
-      totalReturnPercent: 7.68,
-      dayReturn: -215.5,
-      dayReturnPercent: -1.23,
-      weight: 49.3
-    },
-    {
-      id: '3',
-      code: '161725',
-      name: '招商中证白酒指数',
-      type: '指数型',
-      shares: 5500,
-      avgCost: 0.9200,
-      currentValue: 0.9876,
-      marketValue: 5431.8,
-      totalReturn: 371.8,
-      totalReturnPercent: 7.35,
-      dayReturn: 30.8,
-      dayReturnPercent: 0.56,
-      weight: 15.5
-    }
-  ]
-
-  const mockSummary: PortfolioSummary = {
-    totalAssets: 35060.3,
-    totalCost: 32610,
-    totalReturn: 2450.3,
-    totalReturnPercent: 7.51,
-    dayReturn: 98.3,
-    dayReturnPercent: 0.28
-  }
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // 模拟API调用
-    setTimeout(() => {
-      setHoldings(mockHoldings)
-      setSummary(mockSummary)
-      setLoading(false)
-    }, 1000)
+    const fetchPortfolio = async () => {
+      try {
+        const portfolio = await ApiService.getPortfolio()
+        const mappedHoldings = portfolio.holdings?.map(mapHolding) ?? []
+        setHoldings(mappedHoldings)
+        setSummary(
+          portfolio.summary ? mapSummary(portfolio.summary) : null
+        )
+        setError(null)
+      } catch (err) {
+        console.error('Failed to load portfolio', err)
+        const status = (err as AxiosError)?.response?.status
+        if (status === 404) {
+          setHoldings([])
+          setSummary(null)
+          setError(null)
+        } else {
+          setHoldings([])
+          setSummary(null)
+          setError('获取投资组合数据失败，请稍后重试。')
+        }
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchPortfolio()
   }, [])
 
   // 资产配置饼图
@@ -407,10 +413,32 @@ const Portfolio: React.FC = () => {
     }
   ]
 
-  if (loading || !summary) {
+  if (loading) {
     return (
       <div className="page-container">
         <Card loading={true} style={{ minHeight: 400 }} />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="page-container">
+        <Card style={{ minHeight: 400 }}>
+          <Space direction="vertical" size="middle" style={{ width: '100%', textAlign: 'center' }}>
+            <Text type="danger">{error}</Text>
+          </Space>
+        </Card>
+      </div>
+    )
+  }
+
+  if (!summary) {
+    return (
+      <div className="page-container">
+        <Card style={{ minHeight: 400 }}>
+          <Empty description="暂无投资组合数据" />
+        </Card>
       </div>
     )
   }

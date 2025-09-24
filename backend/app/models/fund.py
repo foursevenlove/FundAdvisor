@@ -70,10 +70,10 @@ class Holding(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     # user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    fund_id = Column(Integer, ForeignKey("funds.id"), nullable=False)
+    fund_id = Column(Integer, ForeignKey("funds.id"), nullable=False, index=True)
     shares = Column(Float, nullable=False, comment="持有份额")
-    cost_price = Column(Float, nullable=False, comment="成本价格")
-    purchase_date = Column(DateTime, nullable=False, comment="购买日期")
+    avg_cost = Column("cost_price", Float, nullable=False, comment="平均持仓成本")
+    purchase_date = Column(DateTime, nullable=True, comment="最近交易日期")
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
