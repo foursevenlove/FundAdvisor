@@ -153,67 +153,6 @@ async def list_funds(
                             )
                         )
 
-                # if not fund_items and offset == 0:
-                #     mock_funds = [
-                #         {
-                #             "code": "000001",
-                #             "name": "华夏成长混合",
-                #             "fund_type": "混合型",
-                #             "manager": "张三",
-                #             "company": "华夏基金",
-                #             "establish_date": "2001-12-18",
-                #             "description": "本基金主要投资于具有良好成长性的上市公司股票",
-                #         },
-                #         {
-                #             "code": "110022",
-                #             "name": "易方达消费行业股票",
-                #             "fund_type": "股票型",
-                #             "manager": "李四",
-                #             "company": "易方达基金",
-                #             "establish_date": "2010-08-20",
-                #             "description": "本基金主要投资于消费行业相关的优质上市公司",
-                #         },
-                #         {
-                #             "code": "161725",
-                #             "name": "招商中证白酒指数",
-                #             "fund_type": "指数型",
-                #             "manager": "王五",
-                #             "company": "招商基金",
-                #             "establish_date": "2015-05-27",
-                #             "description": "本基金跟踪中证白酒指数，投资于白酒行业相关股票",
-                #         },
-                #         {
-                #             "code": "519066",
-                #             "name": "汇添富蓝筹稳健混合",
-                #             "fund_type": "混合型",
-                #             "manager": "赵六",
-                #             "company": "汇添富基金",
-                #             "establish_date": "2007-03-12",
-                #             "description": "本基金主要投资于蓝筹股，追求稳健的长期回报",
-                #         },
-                #     ]
-                #
-                #     fund_items = [
-                #         FundInfo(
-                #             id=index + 1,
-                #             code=mock["code"],
-                #             name=mock["name"],
-                #             fund_type=mock.get("fund_type"),
-                #             manager=mock.get("manager"),
-                #             company=mock.get("company"),
-                #             establish_date=mock.get("establish_date"),
-                #             scale=None,
-                #             current_nav=None,
-                #             accumulated_nav=None,
-                #             daily_return=None,
-                #             description=mock.get("description"),
-                #         )
-                #         for index, mock in enumerate(mock_funds[:limit])
-                #     ]
-                #
-                #     total = len(mock_funds)
-                #     current_page = 1
-
         if total:
             pages = max(1, math.ceil(total / limit))
             current_page = max(1, min(current_page, pages))

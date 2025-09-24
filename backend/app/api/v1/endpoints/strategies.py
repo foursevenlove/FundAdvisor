@@ -1,15 +1,18 @@
 """
 策略相关 API 端点
 """
+import logging
+
 from fastapi import APIRouter, HTTPException, Body
 from typing import Dict, List, Any
 from pydantic import BaseModel
 
 from ....strategies import strategy_manager
 from ....schemas import APIResponse
-from ....services import data_service
+from ....services.data_service import data_service
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 class StrategyApplyRequest(BaseModel):
@@ -41,9 +44,20 @@ async def apply_strategy(request: StrategyApplyRequest = Body(...)):
 
         # 4. 返回结果
         return {"signal": signal, "reason": reason}
-    except HTTPException:
+    except HTTPException as exc:
+        logger.error(
+            "HTTPException in apply_strategy: status=%s detail=%s",
+            exc.status_code,
+            exc.detail,
+            exc_info=True,
+        )
         raise
     except Exception as e:
+        logger.exception(
+            "Unexpected error in apply_strategy for fund=%s strategy=%s",
+            request.fund_code,
+            request.strategy_name,
+        )
         raise HTTPException(status_code=500, detail=f"策略应用失败: {str(e)}")
 
 
@@ -60,6 +74,7 @@ async def get_all_strategies():
             "available_strategies": list(strategies.keys())
         }
     except Exception as e:
+        logger.exception("获取策略列表失败")
         raise HTTPException(status_code=500, detail=f"获取策略列表失败: {str(e)}")
 
 
@@ -81,9 +96,17 @@ async def get_strategy_info(strategy_name: str):
             "strategy_name": strategy_name,
             "is_available": True
         }
-    except HTTPException:
+    except HTTPException as exc:
+        logger.error(
+            "HTTPException in get_strategy_info: %s status=%s detail=%s",
+            strategy_name,
+            exc.status_code,
+            exc.detail,
+            exc_info=True,
+        )
         raise
     except Exception as e:
+        logger.exception("获取策略信息失败: %s", strategy_name)
         raise HTTPException(status_code=500, detail=f"获取策略信息失败: {str(e)}")
 
 
@@ -104,9 +127,17 @@ async def get_strategy_config(strategy_name: str):
             "config": strategy.config,
             "description": strategy.get_strategy_description()
         }
-    except HTTPException:
+    except HTTPException as exc:
+        logger.error(
+            "HTTPException in get_strategy_config: %s status=%s detail=%s",
+            strategy_name,
+            exc.status_code,
+            exc.detail,
+            exc_info=True,
+        )
         raise
     except Exception as e:
+        logger.exception("获取策略配置失败: %s", strategy_name)
         raise HTTPException(status_code=500, detail=f"获取策略配置失败: {str(e)}")
 
 
@@ -128,9 +159,17 @@ async def update_strategy_config(strategy_name: str, config: Dict[str, Any]):
             message=f"策略 {strategy_name} 配置更新成功",
             data={"strategy_name": strategy_name, "new_config": config}
         )
-    except HTTPException:
+    except HTTPException as exc:
+        logger.error(
+            "HTTPException in update_strategy_config: %s status=%s detail=%s",
+            strategy_name,
+            exc.status_code,
+            exc.detail,
+            exc_info=True,
+        )
         raise
     except Exception as e:
+        logger.exception("更新策略配置失败: %s", strategy_name)
         raise HTTPException(status_code=500, detail=f"更新策略配置失败: {str(e)}")
 
 
@@ -192,6 +231,7 @@ async def get_technical_indicators_info():
             "total_indicators": len(indicators_info)
         }
     except Exception as e:
+        logger.exception("获取技术指标信息失败")
         raise HTTPException(status_code=500, detail=f"获取技术指标信息失败: {str(e)}")
 
 
@@ -237,6 +277,7 @@ async def get_backtest_info():
             "note": "回测功能正在开发中，敬请期待"
         }
     except Exception as e:
+        logger.exception("获取回测信息失败")
         raise HTTPException(status_code=500, detail=f"获取回测信息失败: {str(e)}")
 
 
@@ -289,4 +330,5 @@ async def get_risk_management_info():
             "recommendation": "建议投资者根据自身风险承受能力制定合适的风险管理策略"
         }
     except Exception as e:
+        logger.exception("获取风险管理信息失败")
         raise HTTPException(status_code=500, detail=f"获取风险管理信息失败: {str(e)}")

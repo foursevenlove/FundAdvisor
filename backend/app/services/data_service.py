@@ -1,6 +1,7 @@
 """
 数据服务 - 集成 akshare 获取基金数据
 """
+import asyncio
 import akshare as ak
 import pandas as pd
 from datetime import datetime, timedelta
@@ -280,6 +281,62 @@ class DataService:
         except Exception as e:
             logger.error(f"获取基金净值失败 {fund_code}: {e}")
             return self._generate_mock_nav_data(fund_code, start_date, end_date)
+
+    async def get_fund_historical_data(self, fund_code: str,
+                                       start_date: Optional[str] = None,
+                                       end_date: Optional[str] = None) -> pd.DataFrame:
+        """异步获取策略使用的基金历史净值数据"""
+        try:
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = asyncio.get_event_loop()
+
+            net_values = await loop.run_in_executor(
+                None,
+                self.get_fund_net_value,
+                fund_code,
+                start_date,
+                end_date,
+            )
+
+            if not net_values:
+                logger.warning("未获取到基金 %s 的历史净值数据", fund_code)
+                return pd.DataFrame(columns=["date", "net_value", "volume"])
+
+            history_df = pd.DataFrame(net_values)
+
+            if "date" not in history_df.columns:
+                logger.warning("基金 %s 的历史数据缺少日期列", fund_code)
+                return pd.DataFrame(columns=["date", "net_value", "volume"])
+
+            history_df["date"] = pd.to_datetime(history_df["date"], errors="coerce")
+            history_df = history_df.dropna(subset=["date"])
+
+            if "net_value" not in history_df.columns:
+                source_column = "unit_nav" if "unit_nav" in history_df.columns else None
+                if source_column:
+                    history_df["net_value"] = pd.to_numeric(
+                        history_df[source_column], errors="coerce"
+                    )
+                else:
+                    logger.warning("基金 %s 的历史数据缺少净值列", fund_code)
+                    return pd.DataFrame(columns=["date", "net_value", "volume"])
+
+            history_df = history_df.dropna(subset=["net_value"])
+
+            # 提供可选的成交量列，策略会自动忽略缺失值
+            if "volume" not in history_df.columns:
+                history_df["volume"] = pd.NA
+
+            # 按日期排序以确保策略计算的输入顺序正确
+            history_df = history_df.sort_values("date").reset_index(drop=True)
+
+            return history_df
+
+        except Exception as exc:
+            logger.error("获取基金 %s 历史数据失败: %s", fund_code, exc)
+            return pd.DataFrame(columns=["date", "net_value", "volume"])
 
     def _generate_mock_nav_data(self, fund_code: str, start_date: str, end_date: str) -> List[Dict]:
         """生成模拟净值数据"""

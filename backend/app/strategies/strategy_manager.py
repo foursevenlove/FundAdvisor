@@ -16,12 +16,19 @@ class StrategyManager:
     def __init__(self):
         self.strategies: Dict[str, BaseStrategy] = {}
         self._initialize_strategies()
-    
+
+    @staticmethod
+    def _normalize_strategy_name(strategy_name: str) -> str:
+        """统一策略名称格式"""
+        if not strategy_name:
+            return ""
+        return strategy_name.strip().lower().replace("-", "_")
+
     def _initialize_strategies(self):
         """初始化所有策略"""
         # 从配置中获取策略参数
         strategy_config = settings.STRATEGY_CONFIG
-        
+
         # 初始化移动均线交叉策略
         self.strategies['ma_cross'] = MACrossStrategy(
             strategy_config.get('ma_cross', {})
@@ -40,14 +47,15 @@ class StrategyManager:
     def get_strategy(self, strategy_name: str) -> Optional[BaseStrategy]:
         """
         获取指定策略
-        
+
         Args:
             strategy_name: 策略名称
-            
+
         Returns:
             策略实例或None
         """
-        return self.strategies.get(strategy_name)
+        normalized_name = self._normalize_strategy_name(strategy_name)
+        return self.strategies.get(normalized_name)
     
     def get_all_strategies(self) -> Dict[str, BaseStrategy]:
         """获取所有策略"""
@@ -56,18 +64,18 @@ class StrategyManager:
     def calculate_signal(self, strategy_name: str, data: pd.DataFrame) -> Optional[StrategySignal]:
         """
         计算指定策略的信号
-        
+
         Args:
             strategy_name: 策略名称
             data: 净值数据
-            
+
         Returns:
             策略信号或None
         """
         strategy = self.get_strategy(strategy_name)
         if not strategy:
             return None
-        
+
         return strategy.calculate_signal(data)
     
     def calculate_all_signals(self, data: pd.DataFrame) -> Dict[str, StrategySignal]:

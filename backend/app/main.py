@@ -1,7 +1,8 @@
 """
 FundAdvisor FastAPI 应用主文件
 """
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
@@ -143,8 +144,15 @@ app.add_middleware(
 
 # 全局异常处理器
 @app.exception_handler(HTTPException)
-async def http_exception_handler(request, exc):
+async def http_exception_handler(request: Request, exc: HTTPException):
     """HTTP 异常处理"""
+    logger.error(
+        "HTTPException: %s %s -> status=%s detail=%s",
+        request.method,
+        request.url.path,
+        exc.status_code,
+        exc.detail,
+    )
     return JSONResponse(
         status_code=exc.status_code,
         content={
@@ -156,9 +164,11 @@ async def http_exception_handler(request, exc):
 
 
 @app.exception_handler(Exception)
-async def general_exception_handler(request, exc):
+async def general_exception_handler(request: Request, exc: Exception):
     """通用异常处理"""
-    logger.error(f"未处理的异常: {exc}", exc_info=True)
+    logger.exception(
+        "Unhandled exception: %s %s -> %s", request.method, request.url.path, exc
+    )
     return JSONResponse(
         status_code=500,
         content={
@@ -166,6 +176,26 @@ async def general_exception_handler(request, exc):
             "message": "服务器内部错误",
             "status_code": 500
         }
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """请求体验证异常处理"""
+    logger.error(
+        "Validation error: %s %s -> errors=%s",
+        request.method,
+        request.url.path,
+        exc.errors(),
+    )
+    return JSONResponse(
+        status_code=422,
+        content={
+            "error": True,
+            "message": "请求参数验证失败",
+            "details": exc.errors(),
+            "status_code": 422,
+        },
     )
 
 

@@ -64,6 +64,11 @@ class BaseStrategy(ABC):
             StrategySignal: 策略信号对象
         """
         pass
+
+    def analyze(self, data: pd.DataFrame) -> Tuple[str, str]:
+        """包装 calculate_signal 供外部快速获取信号结论"""
+        signal = self.calculate_signal(data)
+        return signal.signal_type.value.lower(), signal.reason
     
     def validate_data(self, data: pd.DataFrame) -> bool:
         """
