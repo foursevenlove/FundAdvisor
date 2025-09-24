@@ -2,8 +2,10 @@
 基金相关 API 端点
 """
 import logging
+import math
 import random
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import pandas as pd
@@ -14,13 +16,220 @@ from ....services.data_service import data_service
 from ....strategies import strategy_manager
 from ....models import Fund, FundNetValue
 from ....schemas import (
-    FundSearchRequest, FundSearchResult, FundRealtimeData,
-    StrategyAnalysisRequest, StrategyAnalysisResponse, StrategySignalResponse,
-    FundDetailResponse, FundInfo, FundNetValue as FundNetValueSchema,
-    APIResponse
+    FundSearchRequest,
+    FundSearchResult,
+    FundRealtimeData,
+    StrategyAnalysisRequest,
+    StrategyAnalysisResponse,
+    StrategySignalResponse,
+    FundDetailResponse,
+    FundInfo,
+    FundNetValue as FundNetValueSchema,
+    APIResponse,
+    PaginatedResponse,
 )
 
 router = APIRouter()
+
+
+# Helper to normalize DataFrame string values
+def _safe_str(value: Optional[str]) -> str:
+    if value is None:
+        return ""
+    value_str = str(value).strip()
+    if not value_str or value_str.lower() in {"nan", "none", "null", "--"}:
+        return ""
+    return value_str
+
+
+@router.get("/", response_model=PaginatedResponse)
+async def list_funds(
+    skip: int = Query(0, ge=0, description="跳过的记录数量"),
+    limit: int = Query(20, ge=1, le=100, description="返回记录数量"),
+    fund_type: Optional[str] = Query(None, description="按基金类型过滤"),
+    search: Optional[str] = Query(None, description="按基金代码或名称模糊搜索"),
+    page: Optional[int] = Query(None, ge=1, description="分页页码，优先于 skip"),
+    db: Session = Depends(get_db),
+):
+    try:
+        query = db.query(Fund)
+
+        if fund_type:
+            query = query.filter(Fund.fund_type.ilike(f"%{fund_type}%"))
+
+        if search:
+            like_pattern = f"%{search}%"
+            query = query.filter(
+                or_(Fund.code.ilike(like_pattern), Fund.name.ilike(like_pattern))
+            )
+
+        total = query.count()
+
+        if page:
+            current_page = page
+            offset = (page - 1) * limit
+        else:
+            current_page = (skip // limit) + 1
+            offset = skip
+
+        items = (
+            query.order_by(Fund.updated_at.desc(), Fund.id.asc())
+            .offset(offset)
+            .limit(limit)
+            .all()
+        )
+
+        fund_items: List[FundInfo] = [FundInfo.model_validate(fund) for fund in items]
+
+        if not fund_items:
+            fallback_df = data_service._get_fund_list()
+            if not fallback_df.empty:
+                filtered_df = fallback_df.copy()
+
+                if fund_type and "基金类型" in filtered_df.columns:
+                    filtered_df = filtered_df[
+                        filtered_df["基金类型"]
+                        .astype(str)
+                        .str.contains(fund_type, case=False, na=False)
+                    ]
+
+                if search:
+                    code_match = (
+                        filtered_df["基金代码"]
+                        .astype(str)
+                        .str.contains(search, case=False, na=False)
+                        if "基金代码" in filtered_df.columns
+                        else None
+                    )
+                    name_match = (
+                        filtered_df["基金简称"]
+                        .astype(str)
+                        .str.contains(search, case=False, na=False)
+                        if "基金简称" in filtered_df.columns
+                        else None
+                    )
+
+                    if code_match is not None and name_match is not None:
+                        filtered_df = filtered_df[code_match | name_match]
+                    elif code_match is not None:
+                        filtered_df = filtered_df[code_match]
+                    elif name_match is not None:
+                        filtered_df = filtered_df[name_match]
+
+                total = int(filtered_df.shape[0])
+
+                if total:
+                    last_page = ((total - 1) // limit) + 1
+                    if offset >= total:
+                        current_page = last_page
+                        offset = (last_page - 1) * limit
+
+                    fallback_slice = filtered_df.iloc[offset : offset + limit]
+                    fund_items = []
+
+                    for position, (_, row) in enumerate(
+                        fallback_slice.iterrows(), start=1
+                    ):
+                        fallback_id = offset + position
+                        fund_items.append(
+                            FundInfo(
+                                id=fallback_id,
+                                code=_safe_str(row.get("基金代码")),
+                                name=_safe_str(row.get("基金简称") or row.get("基金名称"))
+                                or f"基金{fallback_id}",
+                                fund_type=_safe_str(row.get("基金类型")) or None,
+                                manager=_safe_str(row.get("基金经理")) or None,
+                                company=_safe_str(row.get("基金管理人") or row.get("基金公司"))
+                                or None,
+                                establish_date=_safe_str(
+                                    row.get("成立日期") or row.get("成立时间")
+                                )
+                                or None,
+                                scale=None,
+                                current_nav=None,
+                                accumulated_nav=None,
+                                daily_return=None,
+                                description=_safe_str(row.get("基金全称")) or None,
+                            )
+                        )
+
+                # if not fund_items and offset == 0:
+                #     mock_funds = [
+                #         {
+                #             "code": "000001",
+                #             "name": "华夏成长混合",
+                #             "fund_type": "混合型",
+                #             "manager": "张三",
+                #             "company": "华夏基金",
+                #             "establish_date": "2001-12-18",
+                #             "description": "本基金主要投资于具有良好成长性的上市公司股票",
+                #         },
+                #         {
+                #             "code": "110022",
+                #             "name": "易方达消费行业股票",
+                #             "fund_type": "股票型",
+                #             "manager": "李四",
+                #             "company": "易方达基金",
+                #             "establish_date": "2010-08-20",
+                #             "description": "本基金主要投资于消费行业相关的优质上市公司",
+                #         },
+                #         {
+                #             "code": "161725",
+                #             "name": "招商中证白酒指数",
+                #             "fund_type": "指数型",
+                #             "manager": "王五",
+                #             "company": "招商基金",
+                #             "establish_date": "2015-05-27",
+                #             "description": "本基金跟踪中证白酒指数，投资于白酒行业相关股票",
+                #         },
+                #         {
+                #             "code": "519066",
+                #             "name": "汇添富蓝筹稳健混合",
+                #             "fund_type": "混合型",
+                #             "manager": "赵六",
+                #             "company": "汇添富基金",
+                #             "establish_date": "2007-03-12",
+                #             "description": "本基金主要投资于蓝筹股，追求稳健的长期回报",
+                #         },
+                #     ]
+                #
+                #     fund_items = [
+                #         FundInfo(
+                #             id=index + 1,
+                #             code=mock["code"],
+                #             name=mock["name"],
+                #             fund_type=mock.get("fund_type"),
+                #             manager=mock.get("manager"),
+                #             company=mock.get("company"),
+                #             establish_date=mock.get("establish_date"),
+                #             scale=None,
+                #             current_nav=None,
+                #             accumulated_nav=None,
+                #             daily_return=None,
+                #             description=mock.get("description"),
+                #         )
+                #         for index, mock in enumerate(mock_funds[:limit])
+                #     ]
+                #
+                #     total = len(mock_funds)
+                #     current_page = 1
+
+        if total:
+            pages = max(1, math.ceil(total / limit))
+            current_page = max(1, min(current_page, pages))
+        else:
+            pages = 1
+            current_page = 1
+
+        return PaginatedResponse(
+            items=fund_items, total=total, page=current_page, size=limit, pages=pages
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.exception("获取基金列表失败: %s", e)
+        raise HTTPException(status_code=500, detail=f"获取基金列表失败: {str(e)}")
 
 
 # 工具函数：将策略指标转换为原生类型，防止Pydantic序列化报错
@@ -30,7 +239,7 @@ def _sanitize_value(value):
         return {key: _sanitize_value(val) for key, val in value.items()}
     if isinstance(value, (list, tuple, set)):
         return [_sanitize_value(item) for item in value]
-    if hasattr(value, 'item'):
+    if hasattr(value, "item"):
         try:
             return value.item()
         except Exception:  # pragma: no cover - 防御性处理
@@ -44,15 +253,15 @@ def _build_strategy_response(signal):
         signal_type=signal.signal_type,
         strength=float(signal.strength),
         reason=signal.reason,
-        indicators=_sanitize_value(getattr(signal, 'indicators', {})),
-        timestamp=signal.timestamp
+        indicators=_sanitize_value(getattr(signal, "indicators", {})),
+        timestamp=signal.timestamp,
     )
 
 
 @router.get("/search", response_model=List[FundSearchResult])
 async def search_funds(
     q: str = Query(..., description="搜索关键词（基金代码或名称）"),
-    limit: int = Query(20, ge=1, le=100, description="返回结果数量限制")
+    limit: int = Query(20, ge=1, le=100, description="返回结果数量限制"),
 ):
     """
     搜索基金
@@ -77,19 +286,19 @@ async def get_fund_info(fund_code: str, db: Session = Depends(get_db)):
     try:
         # 先从数据库查询
         fund = db.query(Fund).filter(Fund.code == fund_code).first()
-        
+
         if not fund:
             # 从数据源获取信息
             fund_info = data_service.get_fund_info(fund_code)
             if not fund_info:
                 raise HTTPException(status_code=404, detail="基金不存在")
-            
+
             # 保存到数据库
             fund = Fund(**fund_info)
             db.add(fund)
             db.commit()
             db.refresh(fund)
-        
+
         return FundInfo.model_validate(fund)
     except HTTPException:
         raise
@@ -108,7 +317,7 @@ async def get_fund_realtime_data(fund_code: str):
         realtime_data = data_service.get_fund_realtime_data(fund_code)
         if not realtime_data:
             raise HTTPException(status_code=404, detail="无法获取实时数据")
-        
+
         return FundRealtimeData(**realtime_data)
     except HTTPException:
         raise
@@ -121,7 +330,7 @@ async def get_fund_net_values(
     fund_code: str,
     start_date: Optional[str] = Query(None, description="开始日期 YYYY-MM-DD"),
     end_date: Optional[str] = Query(None, description="结束日期 YYYY-MM-DD"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     获取基金净值历史数据
@@ -139,11 +348,7 @@ async def get_fund_net_values(
             if not success:
                 # 如果无法从数据源获取，创建基础记录
                 fund = Fund(
-                    code=fund_code,
-                    name="",
-                    fund_type="",
-                    manager="",
-                    company=""
+                    code=fund_code, name="", fund_type="", manager="", company=""
                 )
                 db.add(fund)
                 db.commit()
@@ -155,11 +360,11 @@ async def get_fund_net_values(
         query = db.query(FundNetValue).filter(FundNetValue.fund_id == fund.id)
 
         if start_date:
-            start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+            start_dt = datetime.strptime(start_date, "%Y-%m-%d")
             query = query.filter(FundNetValue.date >= start_dt)
 
         if end_date:
-            end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+            end_dt = datetime.strptime(end_date, "%Y-%m-%d")
             query = query.filter(FundNetValue.date <= end_dt)
 
         net_values = query.order_by(FundNetValue.date.asc()).limit(1000).all()
@@ -170,12 +375,12 @@ async def get_fund_net_values(
 
             # 设置日期范围
             if end_date:
-                end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+                end_dt = datetime.strptime(end_date, "%Y-%m-%d")
             else:
                 end_dt = datetime.now()
 
             if start_date:
-                start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+                start_dt = datetime.strptime(start_date, "%Y-%m-%d")
             else:
                 start_dt = end_dt - timedelta(days=365)
 
@@ -187,14 +392,16 @@ async def get_fund_net_values(
                 if current_date.weekday() < 5:  # 工作日
                     # 生成随机波动
                     change_pct = (random.random() - 0.5) * 0.04  # ±2%
-                    base_value *= (1 + change_pct)
+                    base_value *= 1 + change_pct
 
-                    mock_data.append(FundNetValueSchema(
-                        date=current_date.strftime('%Y-%m-%d'),
-                        unit_nav=round(base_value, 4),
-                        accumulated_nav=round(base_value, 4),
-                        daily_return=round(change_pct * 100, 2)
-                    ))
+                    mock_data.append(
+                        FundNetValueSchema(
+                            date=current_date.strftime("%Y-%m-%d"),
+                            unit_nav=round(base_value, 4),
+                            accumulated_nav=round(base_value, 4),
+                            daily_return=round(change_pct * 100, 2),
+                        )
+                    )
 
                 current_date += timedelta(days=1)
 
@@ -204,10 +411,10 @@ async def get_fund_net_values(
 
         return [
             FundNetValueSchema(
-                date=nv.date.strftime('%Y-%m-%d'),
+                date=nv.date.strftime("%Y-%m-%d"),
                 unit_nav=nv.net_value,
                 accumulated_nav=nv.accumulated_value,
-                daily_return=nv.daily_return
+                daily_return=nv.daily_return,
             )
             for nv in net_values
         ]
@@ -220,9 +427,7 @@ async def get_fund_net_values(
 
 @router.post("/{fund_code}/strategy-analysis", response_model=StrategyAnalysisResponse)
 async def analyze_fund_strategy(
-    fund_code: str,
-    request: StrategyAnalysisRequest,
-    db: Session = Depends(get_db)
+    fund_code: str, request: StrategyAnalysisRequest, db: Session = Depends(get_db)
 ):
     """
     分析基金投资策略
@@ -241,37 +446,39 @@ async def analyze_fund_strategy(
             if not success:
                 raise HTTPException(status_code=404, detail="基金不存在")
             fund = db.query(Fund).filter(Fund.code == fund_code).first()
-        
+
         # 获取净值数据
         query = db.query(FundNetValue).filter(FundNetValue.fund_id == fund.id)
-        
+
         if request.start_date:
-            start_dt = datetime.strptime(request.start_date, '%Y-%m-%d')
+            start_dt = datetime.strptime(request.start_date, "%Y-%m-%d")
             query = query.filter(FundNetValue.date >= start_dt)
-        
+
         if request.end_date:
-            end_dt = datetime.strptime(request.end_date, '%Y-%m-%d')
+            end_dt = datetime.strptime(request.end_date, "%Y-%m-%d")
             query = query.filter(FundNetValue.date <= end_dt)
-        
+
         net_values = query.order_by(FundNetValue.date).all()
-        
+
         if not net_values:
             raise HTTPException(status_code=400, detail="没有足够的净值数据进行分析")
-        
+
         # 转换为 DataFrame
-        data = pd.DataFrame([
-            {
-                'date': nv.date,
-                'net_value': nv.net_value,
-                'daily_return': nv.daily_return or 0,
-                'volume': nv.volume or 0
-            }
-            for nv in net_values
-        ])
-        
+        data = pd.DataFrame(
+            [
+                {
+                    "date": nv.date,
+                    "net_value": nv.net_value,
+                    "daily_return": nv.daily_return or 0,
+                    "volume": nv.volume or 0,
+                }
+                for nv in net_values
+            ]
+        )
+
         # 策略分析
         signals = {}
-        
+
         if request.strategy_name:
             # 分析指定策略
             signal = strategy_manager.calculate_signal(request.strategy_name, data)
@@ -282,7 +489,7 @@ async def analyze_fund_strategy(
             all_signals = strategy_manager.calculate_all_signals(data)
             for name, signal in all_signals.items():
                 signals[name] = _build_strategy_response(signal)
-        
+
         # 获取综合信号
         consensus_signal = None
         if len(signals) > 1:
@@ -292,17 +499,17 @@ async def analyze_fund_strategy(
                 strength=float(consensus.strength),
                 reason=consensus.reason,
                 indicators=_sanitize_value(consensus.indicators),
-                timestamp=consensus.timestamp
+                timestamp=consensus.timestamp,
             )
-        
+
         return StrategyAnalysisResponse(
             fund_code=fund_code,
             fund_name=fund.name,
             analysis_date=datetime.now(),
             signals=signals,
-            consensus_signal=consensus_signal
+            consensus_signal=consensus_signal,
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -313,7 +520,7 @@ async def analyze_fund_strategy(
 async def get_fund_detail(
     fund_code: str,
     days: int = Query(365, ge=30, le=1095, description="获取多少天的数据"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     获取基金详细信息（包含基本信息、实时数据、净值数据和策略分析）
@@ -357,7 +564,7 @@ async def get_fund_detail(
                 daily_return=1.24,
                 created_at=fund.created_at if fund else None,
                 updated_at=fund.updated_at if fund else None,
-                description="本基金主要投资于科技创新相关的股票，在严格控制风险的前提下，追求超额收益和长期资本增值。"
+                description="本基金主要投资于科技创新相关的股票，在严格控制风险的前提下，追求超额收益和长期资本增值。",
             )
 
         # 获取实时数据
@@ -373,10 +580,13 @@ async def get_fund_detail(
         start_date = datetime.now() - timedelta(days=days)
 
         if fund:
-            net_values_query = db.query(FundNetValue).filter(
-                FundNetValue.fund_id == fund.id,
-                FundNetValue.date >= start_date
-            ).order_by(FundNetValue.date)
+            net_values_query = (
+                db.query(FundNetValue)
+                .filter(
+                    FundNetValue.fund_id == fund.id, FundNetValue.date >= start_date
+                )
+                .order_by(FundNetValue.date)
+            )
 
             net_values = net_values_query.all()
         else:
@@ -393,23 +603,25 @@ async def get_fund_detail(
                 if current_date.weekday() < 5:  # 只在工作日
                     # 生成随机波动
                     change_pct = (random.random() - 0.5) * 0.04  # ±2%
-                    base_value *= (1 + change_pct)
+                    base_value *= 1 + change_pct
 
-                    mock_nav_data.append(FundNetValueSchema(
-                        date=current_date.strftime('%Y-%m-%d'),
-                        unit_nav=round(base_value, 4),
-                        accumulated_nav=round(base_value, 4),
-                        daily_return=round(change_pct * 100, 2)
-                    ))
+                    mock_nav_data.append(
+                        FundNetValueSchema(
+                            date=current_date.strftime("%Y-%m-%d"),
+                            unit_nav=round(base_value, 4),
+                            accumulated_nav=round(base_value, 4),
+                            daily_return=round(change_pct * 100, 2),
+                        )
+                    )
 
             net_values_list = mock_nav_data
         else:
             net_values_list = [
                 FundNetValueSchema(
-                    date=nv.date.strftime('%Y-%m-%d'),
+                    date=nv.date.strftime("%Y-%m-%d"),
                     unit_nav=nv.net_value,
                     accumulated_nav=nv.accumulated_value,
-                    daily_return=nv.daily_return
+                    daily_return=nv.daily_return,
                 )
                 for nv in net_values
             ]
@@ -419,16 +631,18 @@ async def get_fund_detail(
         consensus_signal = None
 
         if net_values_list and len(net_values_list) > 10:
-            data = pd.DataFrame([
-                {
-                    'date': nv.date,
-                    'unit_nav': nv.unit_nav,
-                    'net_value': nv.unit_nav,
-                    'daily_return': nv.daily_return or 0,
-                    'volume': 1000000  # 模拟成交量
-                }
-                for nv in net_values_list
-            ])
+            data = pd.DataFrame(
+                [
+                    {
+                        "date": nv.date,
+                        "unit_nav": nv.unit_nav,
+                        "net_value": nv.unit_nav,
+                        "daily_return": nv.daily_return or 0,
+                        "volume": 1000000,  # 模拟成交量
+                    }
+                    for nv in net_values_list
+                ]
+            )
 
             try:
                 all_signals = strategy_manager.calculate_all_signals(data)
@@ -439,12 +653,12 @@ async def get_fund_detail(
                 if len(strategy_signals) > 1:
                     consensus = strategy_manager.get_consensus_signal(data)
                     consensus_signal = StrategySignalResponse(
-                signal_type=consensus.signal_type,
-                strength=float(consensus.strength),
-                reason=consensus.reason,
-                indicators=_sanitize_value(consensus.indicators),
-                timestamp=consensus.timestamp
-            )
+                        signal_type=consensus.signal_type,
+                        strength=float(consensus.strength),
+                        reason=consensus.reason,
+                        indicators=_sanitize_value(consensus.indicators),
+                        timestamp=consensus.timestamp,
+                    )
             except:
                 pass  # 策略分析失败不影响其他数据
 
@@ -453,7 +667,7 @@ async def get_fund_detail(
             realtime_data=realtime_data,
             net_values=net_values_list,
             strategy_signals=strategy_signals,
-            consensus_signal=consensus_signal
+            consensus_signal=consensus_signal,
         )
 
     except HTTPException:
@@ -474,11 +688,8 @@ async def update_fund_data(fund_code: str, db: Session = Depends(get_db)):
         success = data_service.update_fund_data(db, fund_code)
         if not success:
             raise HTTPException(status_code=400, detail="更新基金数据失败")
-        
-        return APIResponse(
-            success=True,
-            message=f"基金 {fund_code} 数据更新成功"
-        )
+
+        return APIResponse(success=True, message=f"基金 {fund_code} 数据更新成功")
     except HTTPException:
         raise
     except Exception as e:
