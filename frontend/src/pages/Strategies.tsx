@@ -454,35 +454,35 @@ const Strategies: React.FC = () => {
       </Row>
 
       {/* 策略详情 */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.4 }}
-      >
-        <Card>
-          <Tabs defaultActiveKey="signals" size="large">
-            <TabPane tab="最新信号" key="signals">
-              <Table
-                columns={signalColumns}
-                dataSource={strategies.flatMap(s => s.signals)}
-                rowKey="id"
-                pagination={false}
-                loading={loading}
-              />
-            </TabPane>
-            
-            <TabPane tab="策略表现" key="performance">
-              <div style={{ height: 400 }}>
-                <ReactECharts
-                  option={getPerformanceComparisonOption()}
-                  style={{ height: '100%', width: '100%' }}
-                  theme="dark"
-                />
-              </div>
-            </TabPane>
-          </Tabs>
-        </Card>
-      </motion.div>
+      {/*<motion.div*/}
+      {/*  initial={{ opacity: 0, y: 20 }}*/}
+      {/*  animate={{ opacity: 1, y: 0 }}*/}
+      {/*  transition={{ duration: 0.5, delay: 0.4 }}*/}
+      {/*>*/}
+      {/*  <Card>*/}
+      {/*    <Tabs defaultActiveKey="signals" size="large">*/}
+      {/*      <TabPane tab="最新信号" key="signals">*/}
+      {/*        <Table*/}
+      {/*          columns={signalColumns}*/}
+      {/*          dataSource={strategies.flatMap(s => s.signals)}*/}
+      {/*          rowKey="id"*/}
+      {/*          pagination={false}*/}
+      {/*          loading={loading}*/}
+      {/*        />*/}
+      {/*      </TabPane>*/}
+      {/*      */}
+      {/*      <TabPane tab="策略表现" key="performance">*/}
+      {/*        <div style={{ height: 400 }}>*/}
+      {/*          <ReactECharts*/}
+      {/*            option={getPerformanceComparisonOption()}*/}
+      {/*            style={{ height: '100%', width: '100%' }}*/}
+      {/*            theme="dark"*/}
+      {/*          />*/}
+      {/*        </div>*/}
+      {/*      </TabPane>*/}
+      {/*    </Tabs>*/}
+      {/*  </Card>*/}
+      {/*</motion.div>*/}
     </div>
   )
 }

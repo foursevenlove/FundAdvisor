@@ -4,6 +4,77 @@
 @use './components.scss';
 @use './pages.scss';
 
+// 主题变量
+:root {
+  color-scheme: light;
+  --primary-color: #1677ff;
+  --rgb-primary: 22, 119, 255;
+  --primary-hover: #4096ff;
+  --success-color: #f5222d;
+  --success-hover: #ff7875;
+  --warning-color: #faad14;
+  --error-color: #52c41a;
+
+  --bg-color: #f5f6fa;
+  --bg-color-secondary: #ffffff;
+  --bg-color-lighter: #ffffff;
+  --card-bg: #ffffff;
+  --card-bg-secondary: #f7f9ff;
+  --hover-bg: rgba(0, 0, 0, 0.04);
+  --input-bg: #ffffff;
+
+  --text-primary: rgba(0, 0, 0, 0.88);
+  --text-secondary: rgba(0, 0, 0, 0.6);
+  --text-disabled: rgba(0, 0, 0, 0.35);
+  --text-placeholder: rgba(0, 0, 0, 0.4);
+
+  --border-color: rgba(0, 0, 0, 0.08);
+  --border-color-light: rgba(0, 0, 0, 0.04);
+  --border-color-strong: rgba(0, 0, 0, 0.12);
+
+  --layout-header-bg: #ffffff;
+  --layout-sider-bg: #ffffff;
+  --layout-content-bg: #f5f6fa;
+  --layout-border-color: rgba(0, 0, 0, 0.08);
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --primary-color: #1890ff;
+  --rgb-primary: 24, 144, 255;
+  --primary-hover: #40a9ff;
+  --success-color: #f5222d;
+  --success-hover: #ff4d4f;
+  --warning-color: #faad14;
+  --error-color: #52c41a;
+
+  --bg-color: #0a0a0a;
+  --bg-color-secondary: #141414;
+  --bg-color-lighter: #1f1f1f;
+  --card-bg: #1f1f1f;
+  --card-bg-secondary: #262626;
+  --hover-bg: rgba(255, 255, 255, 0.04);
+  --input-bg: rgba(255, 255, 255, 0.06);
+
+  --text-primary: rgba(255, 255, 255, 0.85);
+  --text-secondary: rgba(255, 255, 255, 0.65);
+  --text-disabled: rgba(255, 255, 255, 0.3);
+  --text-placeholder: rgba(255, 255, 255, 0.4);
+
+  --border-color: rgba(255, 255, 255, 0.12);
+  --border-color-light: rgba(255, 255, 255, 0.06);
+  --border-color-strong: rgba(255, 255, 255, 0.2);
+
+  --layout-header-bg: #141414;
+  --layout-sider-bg: #141414;
+  --layout-content-bg: #0a0a0a;
+  --layout-border-color: rgba(255, 255, 255, 0.12);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
 // 全局样式
 * {
   box-sizing: border-box;

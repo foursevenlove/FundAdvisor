@@ -2,6 +2,142 @@
 
 // 组件样式
 
+// 应用布局
+.app-layout {
+  min-height: 100vh;
+  background: var(--layout-content-bg);
+  transition: background-color $transition-normal $ease-in-out;
+}
+
+.app-sider {
+  background: var(--layout-sider-bg) !important;
+  border-right: 1px solid var(--layout-border-color);
+  transition: background-color $transition-normal $ease-in-out, border-color $transition-normal $ease-in-out;
+
+  .ant-menu {
+    background: transparent !important;
+  }
+
+  .ant-menu-item {
+    border-radius: $border-radius;
+    margin: 6px 12px;
+
+    &.ant-menu-item-selected {
+      background: rgba(var(--rgb-primary), 0.18);
+      color: var(--primary-color);
+    }
+  }
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 16px;
+  border-bottom: 1px solid var(--layout-border-color);
+  transition: border-color $transition-normal $ease-in-out;
+
+  &.is-collapsed {
+    justify-content: center;
+  }
+}
+
+.logo-icon {
+  color: var(--primary-color);
+}
+
+.logo-text {
+  margin-left: 12px;
+}
+
+.logo-title {
+  color: var(--text-primary) !important;
+  font-weight: $font-weight-semibold;
+}
+
+.app-header {
+  padding: 0 24px;
+  background: var(--layout-header-bg);
+  border-bottom: 1px solid var(--layout-border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: background-color $transition-normal $ease-in-out, border-color $transition-normal $ease-in-out;
+}
+
+.app-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sider-trigger-button {
+  width: 40px;
+  height: 40px;
+  font-size: 16px;
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    color: var(--primary-color);
+    background: rgba(var(--rgb-primary), 0.12);
+  }
+}
+
+.app-main-content {
+  margin: 0;
+  background: var(--layout-content-bg);
+  min-height: calc(100vh - $header-height);
+  overflow: auto;
+  transition: background-color $transition-normal $ease-in-out;
+}
+
+.theme-toggle-button {
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 12px;
+  font-weight: $font-weight-medium;
+  transition: color $transition-normal $ease-in-out;
+
+  svg {
+    color: inherit;
+  }
+
+  &:hover,
+  &:focus {
+    color: var(--text-primary);
+    background: rgba(var(--rgb-primary), 0.12);
+  }
+}
+
+.theme-option-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+
+.theme-option-check {
+  color: var(--primary-color);
+}
+
+.theme-toggle-dropdown {
+  .ant-dropdown-menu {
+    min-width: 160px;
+  }
+
+  .ant-dropdown-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
 // 卡片组件
 .fund-card {
   background: $bg-color-card;

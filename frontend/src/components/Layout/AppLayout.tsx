@@ -1,16 +1,19 @@
 import React, { useState } from 'react'
 import { Layout, Menu, Button, Space, Typography } from 'antd'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { 
-  Home, 
-  Search, 
-  Heart, 
-  PieChart, 
-  TrendingUp, 
-  Menu as MenuIcon,
-  X 
+import {
+  Home,
+  Search,
+  Heart,
+  PieChart,
+  TrendingUp,
+  ArrowLeft,
+  ArrowRight
 } from 'lucide-react'
 import { motion } from 'framer-motion'
+
+import ThemeToggle from '../ThemeToggle'
+import { useTheme } from '../../contexts/ThemeContext'
 
 const { Header, Sider, Content } = Layout
 const { Title } = Typography
@@ -19,12 +22,22 @@ interface AppLayoutProps {
   children: React.ReactNode
 }
 
+interface MenuItemConfig {
+  key: string
+  icon: React.ReactNode
+  label: string
+  path: string
+  hidden?: boolean
+}
+
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [collapsed, setCollapsed] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
+  const { resolvedTheme } = useTheme()
+  const menuTheme = resolvedTheme === 'dark' ? 'dark' : 'light'
 
-  const menuItems = [
+  const menuItems: MenuItemConfig[] = [
     {
       key: '/',
       icon: <Home size={18} />,
@@ -47,7 +60,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       key: '/portfolio',
       icon: <PieChart size={18} />,
       label: '我的持仓',
-      path: '/portfolio'
+      path: '/portfolio',
+      hidden: true
     },
     {
       key: '/strategies',
@@ -57,45 +71,38 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     }
   ]
 
-  const handleMenuClick = (item: any) => {
+  const handleMenuClick = (item: MenuItemConfig) => {
     navigate(item.path)
   }
 
+  const showInvestmentCTA = false
+
   return (
-    <Layout className="app-layout" style={{ minHeight: '100vh' }}>
+    <Layout className="app-layout">
       <Sider 
         trigger={null} 
         collapsible 
         collapsed={collapsed}
         width={240}
         collapsedWidth={80}
-        style={{
-          background: '#141414',
-          borderRight: '1px solid rgba(255, 255, 255, 0.12)'
-        }}
+        className="app-sider"
       >
-        <div className="logo-container" style={{ 
-          padding: '16px', 
-          borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: collapsed ? 'center' : 'flex-start'
-        }}>
+        <div className={`logo-container ${collapsed ? 'is-collapsed' : ''}`}>
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.3 }}
           >
-            <TrendingUp size={32} color="#1890ff" />
+            <TrendingUp size={32} className="logo-icon" />
           </motion.div>
           {!collapsed && (
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.3, delay: 0.1 }}
-              style={{ marginLeft: '12px' }}
+              className="logo-text"
             >
-              <Title level={4} style={{ margin: 0, color: '#fff' }}>
+              <Title level={4} className="logo-title" style={{ margin: 0 }}>
                 FundAdvisor
               </Title>
             </motion.div>
@@ -103,61 +110,52 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         </div>
 
         <Menu
-          theme="dark"
+          theme={menuTheme}
           mode="inline"
           selectedKeys={[location.pathname]}
           style={{ 
             background: 'transparent',
             border: 'none'
           }}
-          items={menuItems.map(item => ({
-            key: item.key,
-            icon: item.icon,
-            label: item.label,
-            onClick: () => handleMenuClick(item)
-          }))}
+          items={menuItems
+            .filter(item => !item.hidden)
+            .map(item => ({
+              key: item.key,
+              icon: item.icon,
+              label: item.label,
+              onClick: () => handleMenuClick(item)
+            }))}
         />
       </Sider>
 
       <Layout>
-        <Header style={{ 
-          padding: '0 24px', 
-          background: '#141414',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}>
+        <Header className="app-header">
           <Button
             type="text"
-            icon={collapsed ? <MenuIcon size={18} /> : <X size={18} />}
+            icon={collapsed ? <ArrowRight size={18} /> : <ArrowLeft size={18} />}
             onClick={() => setCollapsed(!collapsed)}
-            style={{
-              fontSize: '16px',
-              width: 40,
-              height: 40,
-              color: '#fff'
-            }}
+            className="sider-trigger-button"
           />
 
-          <Space>
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Button type="primary" size="large">
-                开始投资
-              </Button>
-            </motion.div>
-          </Space>
+          {showInvestmentCTA && (
+            <Space>
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Button type="primary" size="large">
+                  开始投资
+                </Button>
+              </motion.div>
+            </Space>
+          )}
+
+          <div className="app-header-actions">
+            <ThemeToggle />
+          </div>
         </Header>
 
-        <Content style={{ 
-          margin: 0,
-          background: '#0a0a0a',
-          minHeight: 'calc(100vh - 64px)',
-          overflow: 'auto'
-        }}>
+        <Content className="app-main-content">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

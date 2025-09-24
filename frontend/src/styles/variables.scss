@@ -1,25 +1,25 @@
 // 颜色变量
-$primary-color: #1890ff;
-$success-color: #f5222d;
-$warning-color: #faad14;
-$error-color: #52c41a;
-$info-color: #1890ff;
+$primary-color: var(--primary-color);
+$success-color: var(--success-color);
+$warning-color: var(--warning-color);
+$error-color: var(--error-color);
+$info-color: var(--primary-color);
 
-// 深色主题颜色
-$bg-color: #0a0a0a;
-$bg-color-light: #141414;
-$bg-color-lighter: #1f1f1f;
-$bg-color-card: #1f1f1f;
+// 主题颜色引用
+$bg-color: var(--bg-color);
+$bg-color-light: var(--bg-color-secondary);
+$bg-color-lighter: var(--bg-color-lighter);
+$bg-color-card: var(--card-bg);
 
 // 文字颜色
-$text-color: rgba(255, 255, 255, 0.85);
-$text-color-secondary: rgba(255, 255, 255, 0.65);
-$text-color-disabled: rgba(255, 255, 255, 0.25);
+$text-color: var(--text-primary);
+$text-color-secondary: var(--text-secondary);
+$text-color-disabled: var(--text-disabled);
 
 // 边框颜色
-$border-color: rgba(255, 255, 255, 0.12);
-$border-color-light: rgba(255, 255, 255, 0.06);
-$border-color-dark: rgba(255, 255, 255, 0.2);
+$border-color: var(--border-color);
+$border-color-light: var(--border-color-light);
+$border-color-dark: var(--border-color-strong);
 
 // 阴影
 $box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);

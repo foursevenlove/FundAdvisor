@@ -2,13 +2,12 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from 'react-query'
-import { ConfigProvider, theme } from 'antd'
-import zhCN from 'antd/locale/zh_CN'
 import dayjs from 'dayjs'
 import 'dayjs/locale/zh-cn'
 
 import App from './App.tsx'
 import './styles/index.scss'
+import { ThemeProvider } from './contexts/ThemeContext'
 
 // 配置 dayjs 中文
 dayjs.locale('zh-cn')
@@ -24,46 +23,16 @@ const queryClient = new QueryClient({
   },
 })
 
-// Ant Design 主题配置
-const antdTheme = {
-  algorithm: theme.darkAlgorithm,
-  token: {
-    colorPrimary: '#1890ff',
-    colorSuccess: '#f5222d',
-    colorWarning: '#faad14',
-    colorError: '#52c41a',
-    colorInfo: '#1890ff',
-    borderRadius: 8,
-    wireframe: false,
-  },
-  components: {
-    Layout: {
-      bodyBg: '#0a0a0a',
-      headerBg: '#141414',
-      siderBg: '#141414',
-    },
-    Card: {
-      colorBgContainer: '#1f1f1f',
-    },
-    Table: {
-      colorBgContainer: '#1f1f1f',
-    },
-  },
-}
-
 const rootElement = document.getElementById('root')!
 const root = ReactDOM.createRoot(rootElement)
 
 const appTree = (
   <QueryClientProvider client={queryClient}>
-    <ConfigProvider 
-      locale={zhCN} 
-      theme={antdTheme}
-    >
+    <ThemeProvider>
       <BrowserRouter>
         <App />
       </BrowserRouter>
-    </ConfigProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 )
 
