@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react'
 import { Card, Input, List, Typography, Space, Tag, Button, Empty, message } from 'antd'
-import { Search, TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from 'react-query'
 import ApiService, { Fund, FundSearchResult } from '../services/api'
 
 const { Title, Text } = Typography
 
 const FundSearch: React.FC = () => {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [searchValue, setSearchValue] = useState('')
   const [searchResults, setSearchResults] = useState<FundSearchResult[]>([])
   const [loading, setLoading] = useState(false)
@@ -107,6 +109,7 @@ const FundSearch: React.FC = () => {
   const handleAddToWatchlist = async (fund: FundSearchResult) => {
     try {
       await ApiService.addToWatchlist(fund.code)
+      queryClient.invalidateQueries('watchlist')
       message.success(`已添加 ${fund.name} 到关注列表`)
     } catch (error) {
       console.error('添加到关注列表失败:', error)
@@ -116,33 +119,6 @@ const FundSearch: React.FC = () => {
 
   const handleViewDetail = (code: string) => {
     navigate(`/fund/${code}`)
-  }
-
-  const handleAddFund = () => {
-    navigate('/search')
-  }
-
-  const renderChangePercent = (changePercent?: number) => {
-    if (changePercent === undefined) return null
-    
-    const isPositive = changePercent > 0
-    const isNegative = changePercent < 0
-    
-    return (
-      <Space>
-        {isPositive && <TrendingUp size={16} color="#52c41a" />}
-        {isNegative && <TrendingDown size={16} color="#f5222d" />}
-        {changePercent === 0 && <Minus size={16} color="#8c8c8c" />}
-        <Text 
-          style={{ 
-            color: isPositive ? '#52c41a' : isNegative ? '#f5222d' : '#8c8c8c',
-            fontWeight: 500
-          }}
-        >
-          {changePercent > 0 ? '+' : ''}{(changePercent * 100).toFixed(2)}%
-        </Text>
-      </Space>
-    )
   }
 
   return (

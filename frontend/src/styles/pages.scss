@@ -159,7 +159,7 @@
 
   &.active {
     border-color: var(--success-color);
-    box-shadow: 0 4px 12px rgba(82, 196, 26, 0.15);
+    box-shadow: 0 4px 12px rgba(245, 34, 45, 0.15);
 
     .ant-card-head {
       background: linear-gradient(135deg, var(--success-color) 0%, var(--success-hover) 100%);
@@ -322,7 +322,7 @@
   }
 
   &.ant-tag-green {
-    background: rgba(82, 196, 26, 0.1);
+    background: rgba(245, 34, 45, 0.1);
     border-color: var(--success-color);
     color: var(--success-color);
   }
@@ -334,7 +334,7 @@
   }
 
   &.ant-tag-red {
-    background: rgba(245, 34, 45, 0.1);
+    background: rgba(82, 196, 26, 0.1);
     border-color: var(--error-color);
     color: var(--error-color);
   }

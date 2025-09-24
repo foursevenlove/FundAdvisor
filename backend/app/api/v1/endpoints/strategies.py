@@ -1,13 +1,50 @@
 """
 策略相关 API 端点
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Body
 from typing import Dict, List, Any
+from pydantic import BaseModel
 
 from ....strategies import strategy_manager
 from ....schemas import APIResponse
+from ....services import data_service
 
 router = APIRouter()
+
+
+class StrategyApplyRequest(BaseModel):
+    fund_code: str
+    strategy_name: str
+
+
+@router.post("/apply", response_model=Dict[str, str])
+async def apply_strategy(request: StrategyApplyRequest = Body(...)):
+    """
+    应用投资策略分析单个基金
+
+    - **fund_code**: 基金代码
+    - **strategy_name**: 策略名称
+    """
+    try:
+        # 1. 获取基金数据
+        historical_data = await data_service.get_fund_historical_data(request.fund_code)
+        if historical_data.empty:
+            raise HTTPException(status_code=404, detail=f"无法获取基金 {request.fund_code} 的历史数据")
+
+        # 2. 加载策略
+        strategy = strategy_manager.get_strategy(request.strategy_name)
+        if not strategy:
+            raise HTTPException(status_code=404, detail=f"策略 '{request.strategy_name}' 不存在")
+
+        # 3. 执行策略分析
+        signal, reason = strategy.analyze(historical_data)
+
+        # 4. 返回结果
+        return {"signal": signal, "reason": reason}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"策略应用失败: {str(e)}")
 
 
 @router.get("/", response_model=Dict[str, Any])

@@ -55,11 +55,11 @@
           color: $text-color;
           
           &.positive {
-            color: $success-color;
+            color: #f5222d;
           }
           
           &.negative {
-            color: $error-color;
+            color: #52c41a;
           }
         }
       }
@@ -87,13 +87,13 @@
   
   &.buy {
     background: rgba(82, 196, 26, 0.1);
-    color: $success-color;
+    color: #f5222d;
     border: 1px solid rgba(82, 196, 26, 0.2);
   }
   
   &.sell {
     background: rgba(245, 34, 45, 0.1);
-    color: $error-color;
+    color: #52c41a;
     border: 1px solid rgba(245, 34, 45, 0.2);
   }
   

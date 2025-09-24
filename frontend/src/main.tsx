@@ -29,9 +29,9 @@ const antdTheme = {
   algorithm: theme.darkAlgorithm,
   token: {
     colorPrimary: '#1890ff',
-    colorSuccess: '#52c41a',
+    colorSuccess: '#f5222d',
     colorWarning: '#faad14',
-    colorError: '#ff4d4f',
+    colorError: '#52c41a',
     colorInfo: '#1890ff',
     borderRadius: 8,
     wireframe: false,

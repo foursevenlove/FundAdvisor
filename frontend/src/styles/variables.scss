@@ -1,8 +1,8 @@
 // 颜色变量
 $primary-color: #1890ff;
-$success-color: #52c41a;
+$success-color: #f5222d;
 $warning-color: #faad14;
-$error-color: #ff4d4f;
+$error-color: #52c41a;
 $info-color: #1890ff;
 
 // 深色主题颜色
@@ -113,7 +113,7 @@ $status-colors: (
   'buy': #52c41a,
   'sell': #f5222d,
   'hold': #faad14,
-  'up': #52c41a,
-  'down': #f5222d,
+  'up': #f5222d,
+  'down': #52c41a,
   'neutral': #8c8c8c
 );

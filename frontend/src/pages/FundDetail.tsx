@@ -5,6 +5,7 @@ import { ArrowUp, ArrowDown, Star, TrendingUp, Calendar, User, Building } from '
 import { motion } from 'framer-motion'
 import ReactECharts from 'echarts-for-react'
 import ApiService, { FundNavHistory } from '../services/api'
+import { useQueryClient } from 'react-query'
 
 const { Title, Text, Paragraph } = Typography
 const { TabPane } = Tabs
@@ -35,6 +36,7 @@ const FundDetail: React.FC = () => {
   const [navHistory, setNavHistory] = useState<FundNavHistory[]>([])
   const [loading, setLoading] = useState(true)
   const [isWatched, setIsWatched] = useState(false)
+  const queryClient = useQueryClient()
 
   useEffect(() => {
     const fetchFundDetail = async () => {
@@ -294,10 +296,10 @@ const FundDetail: React.FC = () => {
         message.success('已取消关注')
       } else {
         await ApiService.addToWatchlist(fundInfo.code)
-          console.log("添加关注")
         message.success('已添加关注')
       }
       setIsWatched(!isWatched)
+      queryClient.invalidateQueries('watchlist')
     } catch (error) {
       console.error('操作关注失败:', error)
       message.error(isWatched ? '取消关注失败' : '添加关注失败')

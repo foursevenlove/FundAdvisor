@@ -45,18 +45,19 @@ apiClient.interceptors.response.use(
 
 // API响应类型定义
 export interface ApiResponse<T = any> {
-  data: T
-  message?: string
   success: boolean
+  message: string
+  data?: T
+  error?: string
+  timestamp?: string
 }
 
 export interface PaginatedResponse<T> {
   items: T[]
   total: number
   page: number
+  size: number
   pages: number
-  has_next: boolean
-  has_prev: boolean
 }
 
 // 基金相关类型
@@ -73,6 +74,14 @@ export interface Fund {
   accumulated_nav?: number
   daily_return?: number
   description: string
+}
+
+export interface FundRealtimeData {
+  code: string
+  current_value: number
+  change_percent: number
+  update_time: string
+  previous_value: number
 }
 
 export interface FundSearchResult {
@@ -99,6 +108,37 @@ export interface FundPerformance {
   '2y': number
   '3y': number
 }
+
+export interface WatchlistItem {
+  id: string
+  fund_id: string
+  fund_code: string
+  fund_name: string
+  fund_type?: string
+  manager?: string
+  company?: string
+  created_at: string
+}
+
+export interface WatchlistFund extends Fund {
+  watchlistId: string
+  watchedAt: string
+}
+
+const normalizeFund = (fund: any): Fund => ({
+  id: String(fund?.id ?? fund?.code ?? ''),
+  code: fund?.code ?? '',
+  name: fund?.name ?? '',
+  fund_type: fund?.fund_type ?? '',
+  manager: fund?.manager ?? '',
+  company: fund?.company ?? '',
+  establish_date: fund?.establish_date ?? '',
+  scale: fund?.scale ?? undefined,
+  current_nav: fund?.current_nav ?? undefined,
+  accumulated_nav: fund?.accumulated_nav ?? undefined,
+  daily_return: fund?.daily_return ?? undefined,
+  description: fund?.description ?? '',
+})
 
 // 用户相关类型
 export interface User {
@@ -171,6 +211,16 @@ export interface Strategy {
   }
 }
 
+export interface ApplyStrategyPayload {
+  fund_code: string
+  strategy_name: string
+}
+
+export interface ApplyStrategyResponse {
+  signal: 'buy' | 'sell' | 'hold'
+  reason: string
+}
+
 export interface StrategySignal {
   id: string
   fund_id: string
@@ -196,72 +246,125 @@ export class ApiService {
   }
 
   // 基金相关
-  static async getFunds(params?: {
-    skip?: number
-    limit?: number
-    fund_type?: string
-    search?: string
-  }): Promise<PaginatedResponse<Fund>> {
-    const response = await apiClient.get('/api/v1/funds/', { params })
-    return response.data
-  }
-
-  static async getFundById(fundId: string): Promise<Fund> {
-    const response = await apiClient.get(`/api/v1/funds/${fundId}/detail`)
-    // The backend returns a FundDetailResponse object, we need to extract fund_info from it
-    return response.data.fund_info
-  }
-
-  static async searchFunds(query: string, limit = 10): Promise<FundSearchResult[]> {
-    const response = await apiClient.get('/api/v1/funds/search', {
-      params: { q: query, limit }
-    })
-    return response.data
+  static async getFundById(fundCode: string): Promise<Fund> {
+    const response = await apiClient.get(`/api/v1/funds/${fundCode}/info`)
+    return normalizeFund(response.data)
   }
 
   static async getFundNavHistory(
-    fundId: string,
-    startDate?: string,
-    endDate?: string
+    fundCode: string,
+    params?: { start_date?: string; end_date?: string }
   ): Promise<FundNavHistory[]> {
-    const response = await apiClient.get(`/api/v1/funds/${fundId}/net-values`, {
-      params: { start_date: startDate, end_date: endDate }
+    const response = await apiClient.get(`/api/v1/funds/${fundCode}/net-values`, {
+      params,
     })
-    // 确保数据格式正确映射
-    const rawData = response.data
-    if (Array.isArray(rawData)) {
-      return rawData.map(item => ({
-        date: item.date,
-        unit_nav: item.unit_nav || item.net_value,
-        accumulated_nav: item.accumulated_nav || item.accumulated_value,
-        daily_return: item.daily_return
-      }))
-    }
-    return []
-  }
-
-  // 关注列表相关
-  static async getWatchlist(): Promise<Fund[]> {
-    const response = await apiClient.get('/api/v1/watchlist/')
     return response.data
   }
 
-  static async isFundWatched(fundCode: string): Promise<boolean> {
-    try {
-      const watchlist = await this.getWatchlist();
-      return watchlist.some(fund => fund.code === fundCode);
-    } catch (error) {
-      console.error('检查关注状态失败:', error);
-      return false;
+  static async getFunds(
+    params?: {
+      skip?: number
+      limit?: number
+      fund_type?: string
+      search?: string
+      page?: number
+    }
+  ): Promise<PaginatedResponse<Fund>> {
+    const response = await apiClient.get('/api/v1/funds', {
+      params,
+    })
+    const payload = response.data
+
+    return {
+      ...payload,
+      items: Array.isArray(payload.items)
+        ? payload.items.map((item: any) => normalizeFund(item))
+        : [],
     }
   }
 
-  static async addToWatchlist(fundCode: string): Promise<void> {
-    await apiClient.post('/api/v1/watchlist/', { fund_id: fundCode })
+  static async searchFunds(
+    keyword: string,
+    limit = 20
+  ): Promise<FundSearchResult[]> {
+    const response = await apiClient.get('/api/v1/funds/search', {
+      params: { q: keyword, limit },
+    })
+    return response.data
   }
 
-  static async removeFromWatchlist(fundId: string): Promise<void> {
-    await apiClient.delete(`/api/v1/watchlist/${fundId}`)
+  // 关注列表相关
+  static async getWatchlist(options: { enrich?: boolean } = {}): Promise<WatchlistFund[]> {
+    const { enrich = true } = options
+    const response = await apiClient.get('/api/v1/watchlist')
+    const items: WatchlistItem[] = response.data
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return []
+    }
+
+    const buildFund = async (item: WatchlistItem): Promise<WatchlistFund> => {
+      const baseFund = normalizeFund({
+        id: item.fund_id,
+        code: item.fund_code,
+        name: item.fund_name,
+        fund_type: item.fund_type,
+        manager: item.manager,
+        company: item.company,
+      })
+
+      if (!enrich) {
+        return {
+          ...baseFund,
+          watchlistId: item.id,
+          watchedAt: item.created_at,
+        }
+      }
+
+        try {
+          const fund = await ApiService.getFundById(item.fund_code)
+          return {
+            ...fund,
+            watchlistId: item.id,
+            watchedAt: item.created_at,
+          } as WatchlistFund
+        } catch (error) {
+          return {
+            ...baseFund,
+            watchlistId: item.id,
+            watchedAt: item.created_at,
+          }
+        }
+      }
+
+    const results = await Promise.all(items.map((item) => buildFund(item)))
+
+    return results
+  }
+
+  static async addToWatchlist(fundCode: string): Promise<ApiResponse> {
+    const response = await apiClient.post('/api/v1/watchlist', {
+      fund_code: fundCode,
+    })
+    const result: ApiResponse = response.data
+    if (!result.success) {
+      throw new Error(result.message || '添加关注失败')
+    }
+    return result
+  }
+
+  static async removeFromWatchlist(fundCode: string): Promise<ApiResponse> {
+    const response = await apiClient.delete(`/api/v1/watchlist/${fundCode}`)
+    const result: ApiResponse = response.data
+    if (!result.success) {
+      throw new Error(result.message || '取消关注失败')
+    }
+    return result
+  }
+
+  static async isFundWatched(fundCode: string): Promise<boolean> {
+    const watchlist = await ApiService.getWatchlist({ enrich: false })
+    return watchlist.some((item) => item.code === fundCode)
   }
 
   // 投资组合相关
@@ -292,7 +395,7 @@ export class ApiService {
   // 策略相关
   static async getStrategies(): Promise<Strategy[]> {
     const response = await apiClient.get('/api/v1/strategies/')
-    return response.data.strategies
+    return response.data.strategies ?? response.data
   }
 
   static async getStrategyById(strategyId: string): Promise<Strategy> {
@@ -305,9 +408,9 @@ export class ApiService {
     limit = 20
   ): Promise<StrategySignal[]> {
     const response = await apiClient.get(`/api/v1/strategies/${strategyId}/signals`, {
-      params: { limit }
+      params: { limit },
     })
-    return response.data.signals
+    return response.data.signals ?? response.data
   }
 
   static async updateStrategy(
@@ -315,6 +418,13 @@ export class ApiService {
     updates: Partial<Strategy>
   ): Promise<void> {
     await apiClient.put(`/api/v1/strategies/${strategyId}`, updates)
+  }
+
+  static async applyStrategy(
+    payload: ApplyStrategyPayload
+  ): Promise<ApplyStrategyResponse> {
+    const response = await apiClient.post('/api/v1/strategies/apply', payload)
+    return response.data
   }
 
   // 系统相关

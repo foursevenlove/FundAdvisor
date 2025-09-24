@@ -3,6 +3,7 @@
 """
 from fastapi import APIRouter, Depends, HTTPException
 import logging
+import traceback
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -45,8 +46,10 @@ async def get_watchlist(
             ))
         return result
     except Exception as e:
-        logger.error(f"获取关注列表失败: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"获取关注列表失败: {str(e)}")
+        error_msg = f"获取关注列表失败: {str(e)}"
+        logger.error(error_msg)
+        logger.error(traceback.format_exc())  # 打印堆栈信息
+        raise HTTPException(status_code=500, detail=error_msg)
 
 
 @router.post("/", response_model=APIResponse)
@@ -89,8 +92,10 @@ async def add_to_watchlist(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"添加到关注列表失败: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"添加到关注列表失败: {str(e)}")
+        error_msg = f"添加到关注列表失败: {str(e)}"
+        logger.error(error_msg)
+        logger.error(traceback.format_exc())  # 打印堆栈信息
+        raise HTTPException(status_code=500, detail=error_msg)
 
 
 @router.delete("/{fund_code}", response_model=APIResponse)
@@ -129,5 +134,7 @@ async def remove_from_watchlist(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"移除关注失败: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"移除关注失败: {str(e)}")
+        error_msg = f"移除关注失败: {str(e)}"
+        logger.error(error_msg)
+        logger.error(traceback.format_exc())  # 打印堆栈信息
+        raise HTTPException(status_code=500, detail=error_msg)

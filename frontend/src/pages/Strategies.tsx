@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Card, Row, Col, Typography, Space, Button, Tag, Switch, Alert, Tabs, Table, Progress, Statistic } from 'antd'
-import { Brain, TrendingUp, Target, Settings, Play, Pause, BarChart3 } from 'lucide-react'
+import { Brain, Settings, BarChart3 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import ReactECharts from 'echarts-for-react'
 

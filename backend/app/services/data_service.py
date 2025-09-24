@@ -328,7 +328,7 @@ class DataService:
             # 获取实时净值
             realtime_data = ak.fund_open_fund_info_em(
                 symbol=fund_code, 
-                indicator="实时估值"
+                indicator="单位净值走势"
             )
             
             if realtime_data.empty:
@@ -336,12 +336,27 @@ class DataService:
             
             latest = realtime_data.iloc[-1]
             
+            # 处理元组格式的数据
+            # 数据格式类似: ('净值日期', datetime.date(2025, 9, 22)) ('单位净值', 3.2027) ('日增长率', 1.59)
+            unit_nav = 0
+            daily_return = 0
+            nav_date = ""
+            
+            # 遍历 Series 中的项目
+            for key, value in latest.items():
+                if key == '单位净值':
+                    unit_nav = float(value) if value is not None else 0
+                elif key == '日增长率':
+                    daily_return = float(value) if value is not None else 0
+                elif key == '净值日期':
+                    nav_date = str(value) if value is not None else ""
+            
             return {
                 'code': fund_code,
-                'current_value': float(latest.get('估算净值', 0)),
-                'change_percent': float(latest.get('估算增长率', 0)),
-                'update_time': latest.get('估值时间', ''),
-                'previous_value': float(latest.get('昨日净值', 0))
+                'current_value': unit_nav,
+                'change_percent': daily_return,
+                'update_time': nav_date,
+                'previous_value': unit_nav / (1 + daily_return / 100) if daily_return != 0 else unit_nav
             }
             
         except Exception as e:

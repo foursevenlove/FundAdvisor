@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react'
-import { Card, Row, Col, Typography, Space, Table, Progress, Tag, Button, Statistic, Tabs } from 'antd'
-import { PieChart, TrendingUp, TrendingDown, DollarSign, Target, Calendar } from 'lucide-react'
+import { Card, Row, Col, Typography, Space, Table, Progress, Tag, Statistic, Tabs } from 'antd'
+import { TrendingUp, TrendingDown } from 'lucide-react'
 import { motion } from 'framer-motion'
 import ReactECharts from 'echarts-for-react'
 
@@ -246,7 +246,7 @@ const Portfolio: React.FC = () => {
           data: returns,
           smooth: true,
           lineStyle: {
-            color: '#52c41a',
+            color: '#f5222d',
             width: 3
           },
           areaStyle: {
@@ -259,11 +259,11 @@ const Portfolio: React.FC = () => {
               colorStops: [
                 {
                   offset: 0,
-                  color: 'rgba(82, 196, 26, 0.3)'
+                  color: 'rgba(245, 34, 45, 0.3)'
                 },
                 {
                   offset: 1,
-                  color: 'rgba(82, 196, 26, 0.05)'
+                  color: 'rgba(245, 34, 45, 0.05)'
                 }
               ]
             }
@@ -335,7 +335,7 @@ const Portfolio: React.FC = () => {
         <Space direction="vertical" size="small" style={{ textAlign: 'right' }}>
           <Text
             style={{
-              color: record.totalReturn > 0 ? '#52c41a' : '#f5222d',
+              color: record.totalReturn > 0 ? '#f5222d' : '#52c41a',
               fontWeight: 500
             }}
           >
@@ -343,7 +343,7 @@ const Portfolio: React.FC = () => {
           </Text>
           <Text
             style={{
-              color: record.totalReturnPercent > 0 ? '#52c41a' : '#f5222d',
+              color: record.totalReturnPercent > 0 ? '#f5222d' : '#52c41a',
               fontSize: 14
             }}
           >
@@ -361,14 +361,14 @@ const Portfolio: React.FC = () => {
         <Space direction="vertical" size="small" style={{ textAlign: 'right' }}>
           <Space>
             {record.dayReturn > 0 ? (
-              <TrendingUp size={14} color="#52c41a" />
+              <TrendingUp size={14} color="#f5222d" />
             ) : record.dayReturn < 0 ? (
-              <TrendingDown size={14} color="#f5222d" />
+              <TrendingDown size={14} color="#52c41a" />
             ) : null}
             <Text
               style={{
-                color: record.dayReturn > 0 ? '#52c41a' : 
-                       record.dayReturn < 0 ? '#f5222d' : '#8c8c8c',
+                color: record.dayReturn > 0 ? '#f5222d' : 
+                       record.dayReturn < 0 ? '#52c41a' : '#8c8c8c',
                 fontWeight: 500
               }}
             >
@@ -377,8 +377,8 @@ const Portfolio: React.FC = () => {
           </Space>
           <Text
             style={{
-              color: record.dayReturnPercent > 0 ? '#52c41a' : 
-                     record.dayReturnPercent < 0 ? '#f5222d' : '#8c8c8c',
+              color: record.dayReturnPercent > 0 ? '#f5222d' : 
+                     record.dayReturnPercent < 0 ? '#52c41a' : '#8c8c8c',
               fontSize: 14
             }}
           >
@@ -458,7 +458,7 @@ const Portfolio: React.FC = () => {
                 precision={2}
                 prefix={summary.totalReturn > 0 ? '+¥' : '¥'}
                 valueStyle={{ 
-                  color: summary.totalReturn > 0 ? '#52c41a' : '#f5222d',
+                  color: summary.totalReturn > 0 ? '#f5222d' : '#52c41a',
                   fontSize: 20
                 }}
               />
@@ -479,7 +479,7 @@ const Portfolio: React.FC = () => {
                 suffix="%"
                 prefix={summary.totalReturnPercent > 0 ? '+' : ''}
                 valueStyle={{
-                  color: summary.totalReturnPercent > 0 ? '#52c41a' : '#f5222d',
+                  color: summary.totalReturnPercent > 0 ? '#f5222d' : '#52c41a',
                   fontSize: 20
                 }}
               />
@@ -499,7 +499,7 @@ const Portfolio: React.FC = () => {
                 precision={2}
                 prefix={summary.dayReturn > 0 ? '+¥' : '¥'}
                 valueStyle={{
-                  color: summary.dayReturn > 0 ? '#52c41a' : '#f5222d',
+                  color: summary.dayReturn > 0 ? '#f5222d' : '#52c41a',
                   fontSize: 20
                 }}
               />

@@ -1,210 +1,209 @@
 import React, { useState, useEffect } from 'react'
-import { Card, Table, Space, Button, Typography, Tag, Popconfirm, Empty, Row, Col, Statistic, message } from 'antd'
-import { Star, TrendingUp, TrendingDown, Trash2, Eye, Plus } from 'lucide-react'
+import { Card, Table, Space, Button, Typography, Tag, Popconfirm, Empty, Row, Col, Statistic, message, Select, Spin } from 'antd'
+import { Star, TrendingUp, TrendingDown, Trash2, Eye, Plus, BarChart2 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import ApiService from '../services/api'
+import { useMutation, useQuery, useQueryClient } from 'react-query'
+import ApiService, { ApplyStrategyResponse, WatchlistFund } from '../services/api'
 
 const { Title, Text } = Typography
 
-interface WatchedFund {
-  id: string
-  fund_id: string
-  fund_code: string
-  fund_name: string
-  fund_type: string
-  manager?: string
-  company?: string
-  currentValue?: number
-  changePercent?: number
-  changeAmount?: number
-  created_at: string
-  lastUpdate?: string
+// 扩展的关注列表项接口
+interface WatchlistItem extends WatchlistFund {
+  selectedStrategy: string
+  analysisResult?: ApplyStrategyResponse | null
+  isAnalyzing: boolean
 }
+
+// 策略列表 (暂时硬编码)
+const STRATEGIES = [
+  { label: '移动平均线策略', value: 'MA_CROSS' },
+  { label: '趋势跟踪策略', value: 'TREND_FOLLOWING' },
+  { label: '动态定投策略', value: 'DYNAMIC_DCA' },
+]
 
 const WatchList: React.FC = () => {
   const navigate = useNavigate()
-  const [watchedFunds, setWatchedFunds] = useState<WatchedFund[]>([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
+  const [watchlistItems, setWatchlistItems] = useState<WatchlistItem[]>([])
 
-  useEffect(() => {
-    const fetchWatchlist = async () => {
-      try {
-        const data = await ApiService.getWatchlist()
-        // Transform the data to match our interface
-        const transformedData: WatchedFund[] = data.map((item: any) => ({
-          id: item.id,
-          fund_id: item.fund_id,
-          fund_code: item.fund_code,
-          fund_name: item.fund_name,
-          fund_type: item.fund_type || '',
-          manager: item.manager,
-          company: item.company,
-          created_at: item.created_at,
-          // Add mock current values since the API doesn't provide them yet
-          currentValue: Math.random() * 2 + 1,
-          changePercent: (Math.random() - 0.5) * 6,
-          changeAmount: (Math.random() - 0.5) * 0.1,
-          lastUpdate: new Date().toLocaleString()
+  // 使用 React Query 获取关注列表
+  const { data: watchedFunds = [], isLoading, error } = useQuery(
+    'watchlist',
+    () => ApiService.getWatchlist(),
+    {
+      onSuccess: (data) => {
+        // 数据获取成功后，初始化前端状态
+        const initialItems = data.map(fund => ({
+          ...fund,
+          selectedStrategy: STRATEGIES[0].value, // 默认选择第一个策略
+          analysisResult: null,
+          isAnalyzing: false,
         }))
-        setWatchedFunds(transformedData)
-      } catch (error) {
-        console.error('获取关注列表失败:', error)
-        message.error('获取关注列表失败，请稍后重试')
-        // Fall back to empty list instead of mock data
-        setWatchedFunds([])
-      } finally {
-        setLoading(false)
-      }
+        setWatchlistItems(initialItems)
+      },
+      staleTime: 0,
+      refetchOnMount: 'always',
     }
+  )
+  
+  const watchedFundsData = watchedFunds || []
+  const totalFunds = watchedFundsData.length
+  const gainFunds = watchedFundsData.filter(fund => (fund.daily_return ?? 0) > 0).length
+  const lossFunds = watchedFundsData.filter(fund => (fund.daily_return ?? 0) < 0).length
+  const avgChange = totalFunds > 0 
+    ? watchedFundsData.reduce((sum, fund) => sum + (fund.daily_return ?? 0), 0) / totalFunds 
+    : 0
+  
+  useEffect(() => {
+    if (error) {
+      message.error('获取关注列表失败，请稍后重试')
+    }
+  }, [error])
 
-    fetchWatchlist()
-  }, [])
+  // 使用 useMutation 来执行策略分析
+  const applyStrategyMutation = useMutation(ApiService.applyStrategy, {
+    onMutate: (variables) => {
+      // 开始分析，更新UI状态
+      setWatchlistItems(prev =>
+        prev.map(item =>
+          item.code === variables.fund_code ? { ...item, isAnalyzing: true } : item
+        )
+      )
+    },
+    onSuccess: (data, variables) => {
+      // 分析成功，更新结果
+      setWatchlistItems(prev =>
+        prev.map(item =>
+          item.code === variables.fund_code
+            ? { ...item, analysisResult: data, isAnalyzing: false }
+            : item
+        )
+      )
+      message.success(`基金 ${variables.fund_code} 分析完成`)
+    },
+    onError: (err: any, variables) => {
+      // 分析失败
+      message.error(`分析失败: ${err.response?.data?.detail || err.message}`)
+      setWatchlistItems(prev =>
+        prev.map(item =>
+          item.code === variables.fund_code ? { ...item, isAnalyzing: false, analysisResult: null } : item
+        )
+      )
+    },
+  })
 
-  const handleRemoveFromWatchlist = async (fundId: string) => {
+  const handleStrategyChange = (fundCode: string, strategyName: string) => {
+    setWatchlistItems(prev =>
+      prev.map(item =>
+        item.code === fundCode ? { ...item, selectedStrategy: strategyName } : item
+      )
+    )
+  }
+
+  const handleAnalyze = (fundCode: string) => {
+    const item = watchlistItems.find(i => i.code === fundCode)
+    if (item) {
+      applyStrategyMutation.mutate({
+        fund_code: fundCode,
+        strategy_name: item.selectedStrategy,
+      })
+    }
+  }
+
+  const handleRemoveFromWatchlist = async (fundCode: string) => {
     try {
-      await ApiService.removeFromWatchlist(fundId)
-      setWatchedFunds(prev => prev.filter(fund => fund.fund_id !== fundId))
+      await ApiService.removeFromWatchlist(fundCode)
+      queryClient.invalidateQueries('watchlist')
       message.success('已取消关注')
-    } catch (error) {
-      console.error('取消关注失败:', error)
+    } catch (err) {
       message.error('取消关注失败，请稍后重试')
     }
   }
 
-  const handleViewDetail = (code: string) => {
-    navigate(`/fund/${code}`)
-  }
+  const handleViewDetail = (code: string) => navigate(`/fund/${code}`)
+  const handleAddFund = () => navigate('/search')
 
-  const handleAddFund = () => {
-    navigate('/search')
-  }
+  const renderSignalTag = (result: ApplyStrategyResponse | null | undefined) => {
+    if (!result) return null
 
-  // 计算统计数据
-  const totalFunds = watchedFunds.length
-  const gainFunds = watchedFunds.filter(fund => (fund.changePercent || 0) > 0).length
-  const lossFunds = watchedFunds.filter(fund => (fund.changePercent || 0) < 0).length
-  const avgChange = watchedFunds.length > 0
-    ? watchedFunds.reduce((sum, fund) => sum + (fund.changePercent || 0), 0) / watchedFunds.length
-    : 0
+    const { signal } = result
+    let color = 'grey'
+    let text = '持有'
+
+    if (signal === 'buy') {
+      color = 'green'
+      text = '买入'
+    } else if (signal === 'sell') {
+      color = 'red'
+      text = '卖出'
+    }
+
+    return <Tag color={color}>{text}</Tag>
+  }
 
   const columns = [
     {
       title: '基金信息',
+      dataIndex: 'name',
       key: 'info',
-      render: (_: any, record: WatchedFund) => (
-        <Space direction="vertical" size="small">
-          <Space>
-            <Text strong style={{ fontSize: 16 }}>
-              {record.fund_name}
-            </Text>
-            <Tag color="blue">{record.fund_code}</Tag>
-          </Space>
-          <Space>
-            <Tag>{record.fund_type}</Tag>
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              关注于 {new Date(record.created_at).toLocaleDateString()}
-            </Text>
-          </Space>
-        </Space>
+      render: (name: string, record: WatchlistItem) => (
+        <div>
+          <Text strong>{name}</Text>
+          <div><Tag color="blue">{record.code}</Tag></div>
+        </div>
       ),
-      width: 300
     },
     {
-      title: '单位净值',
-      dataIndex: 'currentValue',
-      key: 'currentValue',
-      render: (value: number) => (
-        <Text strong style={{ fontSize: 16 }}>
-          {value ? value.toFixed(4) : '--'}
-        </Text>
+      title: '策略选择',
+      key: 'strategy',
+      render: (_: any, record: WatchlistItem) => (
+        <Select
+          value={record.selectedStrategy}
+          style={{ width: 150 }}
+          onChange={(value) => handleStrategyChange(record.code, value)}
+          options={STRATEGIES}
+        />
       ),
-      align: 'right' as const
     },
     {
-      title: '日涨跌幅',
-      key: 'change',
-      render: (_: any, record: WatchedFund) => (
-        <Space direction="vertical" size="small" style={{ textAlign: 'right' }}>
-          <Space>
-            {(record.changePercent || 0) > 0 ? (
-              <TrendingUp size={16} color="#52c41a" />
-            ) : (record.changePercent || 0) < 0 ? (
-              <TrendingDown size={16} color="#f5222d" />
-            ) : null}
-            <Text
-              style={{
-                color: (record.changePercent || 0) > 0 ? '#52c41a' :
-                       (record.changePercent || 0) < 0 ? '#f5222d' : '#8c8c8c',
-                fontWeight: 500,
-                fontSize: 16
-              }}
-            >
-              {record.changePercent !== undefined
-                ? `${(record.changePercent || 0) > 0 ? '+' : ''}${(record.changePercent || 0).toFixed(2)}%`
-                : '--'
-              }
-            </Text>
-          </Space>
-          <Text
-            style={{
-              color: (record.changeAmount || 0) > 0 ? '#52c41a' :
-                     (record.changeAmount || 0) < 0 ? '#f5222d' : '#8c8c8c',
-              fontSize: 14
-            }}
-          >
-            {record.changeAmount !== undefined
-              ? `${(record.changeAmount || 0) > 0 ? '+' : ''}${(record.changeAmount || 0).toFixed(4)}`
-              : '--'
-            }
-          </Text>
-        </Space>
+      title: '分析操作',
+      key: 'analyze',
+      render: (_: any, record: WatchlistItem) => (
+        <Button
+          type="primary"
+          icon={<BarChart2 size={16} />}
+          loading={record.isAnalyzing}
+          onClick={() => handleAnalyze(record.code)}
+        >
+          分析
+        </Button>
       ),
-      align: 'right' as const,
-      sorter: (a: WatchedFund, b: WatchedFund) => (a.changePercent || 0) - (b.changePercent || 0)
     },
     {
-      title: '最后更新',
-      dataIndex: 'lastUpdate',
-      key: 'lastUpdate',
-      render: (value: string) => (
-        <Text type="secondary" style={{ fontSize: 12 }}>
-          {value}
-        </Text>
+      title: '操作建议',
+      key: 'suggestion',
+      render: (_: any, record: WatchlistItem) => (
+        record.isAnalyzing ? <Spin size="small" /> : renderSignalTag(record.analysisResult)
       ),
-      align: 'center' as const
     },
     {
-      title: '操作',
+      title: '基金管理',
       key: 'actions',
-      render: (_: any, record: WatchedFund) => (
+      render: (_: any, record: WatchlistItem) => (
         <Space>
-          <Button
-            type="text"
-            icon={<Eye size={16} />}
-            onClick={() => handleViewDetail(record.fund_code)}
-          >
-            详情
-          </Button>
+          <Button icon={<Eye size={16} />} onClick={() => handleViewDetail(record.code)}>详情</Button>
           <Popconfirm
-            title="确认取消关注"
-            description="确定要从关注列表中移除这只基金吗？"
-            onConfirm={() => handleRemoveFromWatchlist(record.fund_id)}
+            title="确认取消关注？"
+            onConfirm={() => handleRemoveFromWatchlist(record.code)}
             okText="确认"
             cancelText="取消"
           >
-            <Button
-              type="text"
-              danger
-              icon={<Trash2 size={16} />}
-            >
-              取消关注
-            </Button>
+            <Button danger icon={<Trash2 size={16} />}>取消关注</Button>
           </Popconfirm>
         </Space>
       ),
-      align: 'center' as const
-    }
+    },
   ]
 
   return (
@@ -315,12 +314,12 @@ const WatchList: React.FC = () => {
             </Button>
           }
         >
-          {watchedFunds.length > 0 ? (
+          {watchlistItems.length > 0 ? (
             <Table
               columns={columns}
-              dataSource={watchedFunds}
-              rowKey="id"
-              loading={loading}
+              dataSource={watchlistItems}
+              rowKey="code"
+              loading={isLoading}
               pagination={{
                 pageSize: 10,
                 showSizeChanger: true,
@@ -331,7 +330,7 @@ const WatchList: React.FC = () => {
               scroll={{ x: 800 }}
             />
           ) : (
-            !loading && (
+            !isLoading && (
               <Empty
                 description="暂无关注的基金"
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
