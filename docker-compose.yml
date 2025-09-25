@@ -2,41 +2,45 @@ version: "3.9"
 
 services:
   postgres:
-    image: postgres:15-alpine
-    container_name: fundadvisor-postgres
+    image: ${POSTGRES_IMAGE:-foursevenlove/fundadvisor-postgres:latest}
     environment:
-      POSTGRES_USER: foursevenlove
-      POSTGRES_PASSWORD: foursevenlove
+      POSTGRES_USER: ${POSTGRES_SUPERUSER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:-postgres}
       POSTGRES_DB: fundadvisor
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
-      - ./logs/postgres:/var/log/postgresql
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d fundadvisor"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_SUPERUSER:-postgres} -d fundadvisor"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
-    command: >
-      postgres -c logging_collector=on \
-               -c log_directory=/var/log/postgresql \
-               -c log_filename=postgresql.log \
-               -c log_statement=none \
-               -c log_min_messages=warning
+    command: [
+      "postgres",
+      "-c", "logging_collector=on",
+      "-c", "log_directory=/var/log/postgresql",
+      "-c", "log_filename=postgresql.log",
+      "-c", "log_statement=none",
+      "-c", "log_min_messages=warning"
+    ]
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - postgres_logs:/var/log/postgresql
     restart: unless-stopped
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    image: fundadvisor-backend:latest
-    env_file:
-      - ./backend/.env
+    image: ${BACKEND_IMAGE:-foursevenlove/fundadvisor-backend:latest}
     environment:
-      DATABASE_URL: postgresql://fundadvisor:fundadvisor123@postgres:5432/fundadvisor
+      DATABASE_URL: ${DATABASE_URL:-postgresql://fundadvisor:fundadvisor123@postgres:5432/fundadvisor}
+      SECRET_KEY: ${SECRET_KEY:-change-me}
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      CORS_ORIGINS: ${CORS_ORIGINS:-["*"]}
+      SCHEDULER_ENABLED: ${SCHEDULER_ENABLED:-false}
+      UPDATE_HOST: ${UPDATE_HOST:-backend}
+      UPDATE_PORT: ${UPDATE_PORT:-8000}
+      UPDATE_TIMEOUT: ${UPDATE_TIMEOUT:-15}
+      UPDATE_CONCURRENCY: ${UPDATE_CONCURRENCY:-8}
       LOG_FILE: /var/log/backend/app.log
     depends_on:
       postgres:
@@ -44,24 +48,24 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./logs/backend:/var/log/backend
+      - backend_logs:/var/log/backend
     restart: unless-stopped
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000/api/v1}
-    image: fundadvisor-frontend:latest
-    ports:
-      - "3000:80"
+    image: ${FRONTEND_IMAGE:-foursevenlove/fundadvisor-frontend:latest}
     depends_on:
       backend:
         condition: service_started
+    ports:
+      - "3000:80"
+    environment:
+      NODE_ENV: production
     volumes:
-      - ./logs/frontend:/var/log/nginx
+      - frontend_logs:/var/log/nginx
     restart: unless-stopped
 
 volumes:
   postgres_data:
+  postgres_logs:
+  backend_logs:
+  frontend_logs:

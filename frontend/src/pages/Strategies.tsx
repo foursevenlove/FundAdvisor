@@ -1,12 +1,10 @@
 
 import React, { useState, useEffect } from 'react'
-import { Card, Row, Col, Typography, Space, Button, Tag, Switch, Alert, Tabs, Table, Progress, Statistic } from 'antd'
+import { Card, Row, Col, Typography, Space, Button, Tag, Switch, Alert, Statistic } from 'antd'
 import { Brain, Settings, BarChart3 } from 'lucide-react'
 import { motion } from 'framer-motion'
-import ReactECharts from 'echarts-for-react'
 
 const { Title, Text, Paragraph } = Typography
-const { TabPane } = Tabs
 
 interface Strategy {
   id: string
@@ -23,22 +21,10 @@ interface Strategy {
     sharpeRatio: number
     winRate: number
   }
-  signals: StrategySignal[]
-}
-
-interface StrategySignal {
-  id: string
-  fundCode: string
-  fundName: string
-  signal: 'buy' | 'sell' | 'hold'
-  confidence: number
-  reason: string
-  timestamp: string
 }
 
 const Strategies: React.FC = () => {
   const [strategies, setStrategies] = useState<Strategy[]>([])
-  const [loading, setLoading] = useState(true)
 
   // 模拟策略数据
   const mockStrategies: Strategy[] = [
@@ -56,27 +42,7 @@ const Strategies: React.FC = () => {
         annualizedReturn: 12.3,
         sharpeRatio: 1.45,
         winRate: 68.5
-      },
-      signals: [
-        {
-          id: '1',
-          fundCode: '000001',
-          fundName: '华夏成长混合',
-          signal: 'buy',
-          confidence: 85,
-          reason: '5日均线上穿20日均线，趋势转强',
-          timestamp: '2024-01-20 14:30:00'
-        },
-        {
-          id: '2',
-          fundCode: '110022',
-          fundName: '易方达消费行业股票',
-          signal: 'hold',
-          confidence: 72,
-          reason: '均线系统保持多头排列',
-          timestamp: '2024-01-20 14:30:00'
-        }
-      ]
+      }
     },
     {
       id: '2',
@@ -92,18 +58,7 @@ const Strategies: React.FC = () => {
         annualizedReturn: 8.7,
         sharpeRatio: 1.28,
         winRate: 75.3
-      },
-      signals: [
-        {
-          id: '3',
-          fundCode: '161725',
-          fundName: '招商中证白酒指数',
-          signal: 'buy',
-          confidence: 78,
-          reason: '当前估值偏低，建议增加定投金额',
-          timestamp: '2024-01-20 14:30:00'
-        }
-      ]
+      }
     },
     {
       id: '3',
@@ -119,27 +74,17 @@ const Strategies: React.FC = () => {
         annualizedReturn: 18.9,
         sharpeRatio: 1.62,
         winRate: 61.8
-      },
-      signals: [
-        {
-          id: '4',
-          fundCode: '519066',
-          fundName: '汇添富蓝筹稳健混合',
-          signal: 'sell',
-          confidence: 82,
-          reason: 'RSI超买，MACD顶背离',
-          timestamp: '2024-01-20 14:30:00'
-        }
-      ]
+      }
     }
   ]
 
   useEffect(() => {
     // 模拟API调用
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       setStrategies(mockStrategies)
-      setLoading(false)
     }, 1000)
+
+    return () => clearTimeout(timeoutId)
   }, [])
 
   const handleToggleStrategy = (strategyId: string, active: boolean) => {
@@ -171,180 +116,7 @@ const Strategies: React.FC = () => {
     }
   }
 
-  const getSignalColor = (signal: string) => {
-    switch (signal) {
-      case 'buy': return '#52c41a'
-      case 'sell': return '#f5222d'
-      case 'hold': return '#faad14'
-      default: return '#8c8c8c'
-    }
-  }
-
-  const getSignalText = (signal: string) => {
-    switch (signal) {
-      case 'buy': return '买入'
-      case 'sell': return '卖出'
-      case 'hold': return '持有'
-      default: return '无信号'
-    }
-  }
-
   // 策略表现对比图
-  const getPerformanceComparisonOption = () => {
-    const strategyNames = strategies.map(s => s.name)
-    const returns = strategies.map(s => s.performance.totalReturn)
-    const sharpeRatios = strategies.map(s => s.performance.sharpeRatio)
-
-    return {
-      title: {
-        text: '策略表现对比',
-        textStyle: {
-          color: '#ffffff',
-          fontSize: 16
-        }
-      },
-      tooltip: {
-        trigger: 'axis',
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        borderColor: '#333',
-        textStyle: {
-          color: '#fff'
-        }
-      },
-      legend: {
-        data: ['总收益率', '夏普比率'],
-        textStyle: {
-          color: '#ffffff'
-        }
-      },
-      xAxis: {
-        type: 'category',
-        data: strategyNames,
-        axisLine: {
-          lineStyle: {
-            color: '#333'
-          }
-        },
-        axisLabel: {
-          color: '#999'
-        }
-      },
-      yAxis: [
-        {
-          type: 'value',
-          name: '收益率(%)',
-          position: 'left',
-          axisLine: {
-            lineStyle: {
-              color: '#333'
-            }
-          },
-          axisLabel: {
-            color: '#999'
-          },
-          splitLine: {
-            lineStyle: {
-              color: '#333'
-            }
-          }
-        },
-        {
-          type: 'value',
-          name: '夏普比率',
-          position: 'right',
-          axisLine: {
-            lineStyle: {
-              color: '#333'
-            }
-          },
-          axisLabel: {
-            color: '#999'
-          }
-        }
-      ],
-      series: [
-        {
-          name: '总收益率',
-          type: 'bar',
-          data: returns,
-          itemStyle: {
-            color: '#1890ff'
-          }
-        },
-        {
-          name: '夏普比率',
-          type: 'line',
-          yAxisIndex: 1,
-          data: sharpeRatios,
-          lineStyle: {
-            color: '#52c41a',
-            width: 3
-          },
-          symbol: 'circle',
-          symbolSize: 8
-        }
-      ]
-    }
-  }
-
-  const signalColumns = [
-    {
-      title: '基金',
-      key: 'fund',
-      render: (_: any, record: StrategySignal) => (
-        <Space direction="vertical" size="small">
-          <Text strong>{record.fundName}</Text>
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            {record.fundCode}
-          </Text>
-        </Space>
-      )
-    },
-    {
-      title: '信号',
-      dataIndex: 'signal',
-      key: 'signal',
-      render: (signal: string) => (
-        <Tag color={getSignalColor(signal)} style={{ fontWeight: 500 }}>
-          {getSignalText(signal)}
-        </Tag>
-      ),
-      align: 'center' as const
-    },
-    {
-      title: '置信度',
-      dataIndex: 'confidence',
-      key: 'confidence',
-      render: (confidence: number) => (
-        <Space direction="vertical" size="small" style={{ width: 80 }}>
-          <Text>{confidence}%</Text>
-          <Progress 
-            percent={confidence} 
-            showInfo={false} 
-            size="small"
-            strokeColor={confidence > 80 ? '#52c41a' : confidence > 60 ? '#faad14' : '#f5222d'}
-          />
-        </Space>
-      ),
-      align: 'center' as const
-    },
-    {
-      title: '信号原因',
-      dataIndex: 'reason',
-      key: 'reason'
-    },
-    {
-      title: '生成时间',
-      dataIndex: 'timestamp',
-      key: 'timestamp',
-      render: (timestamp: string) => (
-        <Text type="secondary" style={{ fontSize: 12 }}>
-          {timestamp}
-        </Text>
-      )
-    }
-  ]
-
   return (
     <div className="page-container">
       <div className="page-header">
