@@ -1,71 +1,58 @@
-version: "3.9"
-
 services:
   postgres:
-    image: ${POSTGRES_IMAGE:-foursevenlove/fundadvisor-postgres:latest}
+    image: postgres:16-alpine
+    container_name: fundadvisor-postgres
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_SUPERUSER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:-postgres}
+      POSTGRES_USER: fundadvisor
+      POSTGRES_PASSWORD: fundadvisor123
       POSTGRES_DB: fundadvisor
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_SUPERUSER:-postgres} -d fundadvisor"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
-    command: [
-      "postgres",
-      "-c", "logging_collector=on",
-      "-c", "log_directory=/var/log/postgresql",
-      "-c", "log_filename=postgresql.log",
-      "-c", "log_statement=none",
-      "-c", "log_min_messages=warning"
-    ]
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - postgres_logs:/var/log/postgresql
-    restart: unless-stopped
 
   backend:
-    image: ${BACKEND_IMAGE:-foursevenlove/fundadvisor-backend:latest}
-    environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://fundadvisor:fundadvisor123@postgres:5432/fundadvisor}
-      SECRET_KEY: ${SECRET_KEY:-change-me}
-      ALGORITHM: HS256
-      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
-      CORS_ORIGINS: ${CORS_ORIGINS:-["*"]}
-      SCHEDULER_ENABLED: ${SCHEDULER_ENABLED:-false}
-      UPDATE_HOST: ${UPDATE_HOST:-backend}
-      UPDATE_PORT: ${UPDATE_PORT:-8000}
-      UPDATE_TIMEOUT: ${UPDATE_TIMEOUT:-15}
-      UPDATE_CONCURRENCY: ${UPDATE_CONCURRENCY:-8}
-      LOG_FILE: /var/log/backend/app.log
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fundadvisor-backend
+    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
+    environment:
+      APP_NAME: FundAdvisor API
+      APP_VERSION: "1.0.0"
+      DEBUG: "False"
+      DATABASE_URL: postgresql://fundadvisor:fundadvisor123@postgres:5432/fundadvisor
+      CORS_ORIGINS: '["http://localhost","http://frontend","http://127.0.0.1"]'
+      SECRET_KEY: change-me-in-prod
+      ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+      LOG_FILE: /var/log/backend/app.log
+      API_V1_STR: /v1
+    volumes:
+      - ./logs/backend:/var/log/backend
     ports:
       - "8000:8000"
-    volumes:
-      - backend_logs:/var/log/backend
-    restart: unless-stopped
 
   frontend:
-    image: ${FRONTEND_IMAGE:-foursevenlove/fundadvisor-frontend:latest}
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: fundadvisor-frontend
+    restart: unless-stopped
     depends_on:
       backend:
         condition: service_started
     ports:
       - "3000:80"
-    environment:
-      NODE_ENV: production
-    volumes:
-      - frontend_logs:/var/log/nginx
-    restart: unless-stopped
 
 volumes:
   postgres_data:
-  postgres_logs:
-  backend_logs:
-  frontend_logs:

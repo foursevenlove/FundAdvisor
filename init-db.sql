@@ -180,8 +180,8 @@ INSERT INTO fund_nav_history (fund_id, nav_date, unit_nav, accumulated_nav, dail
 SELECT 
     f.id,
     CURRENT_DATE - INTERVAL '1 day' * generate_series(0, 30),
-    round(1.0000 + (random() * 0.5), 4),
-    round(1.0000 + (random() * 0.8), 4),
-    round((random() - 0.5) * 0.05, 4)
+    round((1.0000 + (random() * 0.5))::numeric, 4),
+    round((1.0000 + (random() * 0.8))::numeric, 4),
+    round(((random() - 0.5) * 0.05)::numeric, 4)
 FROM funds f
 ON CONFLICT (fund_id, nav_date) DO NOTHING;

@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+.alembic
+alembic/versions/__pycache__/
+.mypy_cache/
+.pytest_cache/
+.git
+.gitignore
+Dockerfile
+.idea/
+.vscode/
+tests/
