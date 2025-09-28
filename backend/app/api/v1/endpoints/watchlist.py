@@ -1,9 +1,10 @@
 """
 关注列表相关 API 端点
 """
+import traceback
+
 from fastapi import APIRouter, Depends, HTTPException
 import logging
-import traceback
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -17,7 +18,7 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.get("/", response_model=List[WatchListResponse])
+@router.get("", response_model=List[WatchListResponse])
 async def get_watchlist(
     db: Session = Depends(get_db)
 ):
@@ -52,7 +53,7 @@ async def get_watchlist(
         raise HTTPException(status_code=500, detail=error_msg)
 
 
-@router.post("/", response_model=APIResponse)
+@router.post("", response_model=APIResponse)
 async def add_to_watchlist(
     request: WatchListRequest,
     db: Session = Depends(get_db)

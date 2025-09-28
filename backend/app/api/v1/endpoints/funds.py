@@ -42,7 +42,7 @@ def _safe_str(value: Optional[str]) -> str:
     return value_str
 
 
-@router.get("/", response_model=PaginatedResponse)
+@router.get("", response_model=PaginatedResponse)
 async def list_funds(
     skip: int = Query(0, ge=0, description="跳过的记录数量"),
     limit: int = Query(20, ge=1, le=100, description="返回记录数量"),

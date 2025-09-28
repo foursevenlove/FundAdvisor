@@ -36,7 +36,7 @@ services:
       SECRET_KEY: change-me-in-prod
       ACCESS_TOKEN_EXPIRE_MINUTES: "30"
       LOG_FILE: /var/log/backend/app.log
-      API_V1_STR: /v1
+      API_V1_STR: /api/v1
     volumes:
       - ./logs/backend:/var/log/backend
     ports:

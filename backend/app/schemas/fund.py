@@ -38,7 +38,7 @@ class FundUpdate(BaseModel):
 
 class FundInfo(FundBase):
     """基金信息响应模型"""
-    id: int
+    id: str
     establish_date: Optional[str] = None
     scale: Optional[float] = Field(None, description="基金规模(亿元)")
     current_nav: Optional[float] = Field(None, description="当前净值")
@@ -59,6 +59,16 @@ class FundInfo(FundBase):
             return value.strftime('%Y-%m-%d')
         value_str = str(value).strip()
         return value_str or None
+
+    @field_validator('id', mode='before')
+    def _normalize_id(cls, value):
+        """统一将主键转换为字符串，兼容 int/UUID。"""
+        if value is None:
+            return ''
+        try:
+            return str(value)
+        except Exception:
+            return ''
 
 
 class FundNetValueBase(BaseModel):

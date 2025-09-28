@@ -61,18 +61,19 @@ CREATE TABLE IF NOT EXISTS funds (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS fund_nav_history (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+CREATE TABLE fund_net_values (
+    id SERIAL PRIMARY KEY,
     fund_id UUID REFERENCES funds(id) ON DELETE CASCADE,
-    nav_date DATE NOT NULL,
-    unit_nav DECIMAL(10, 4),
-    accumulated_nav DECIMAL(10, 4),
-    daily_return DECIMAL(8, 4),
+    date TIMESTAMP NOT NULL,
+    net_value FLOAT NOT NULL,
+    accumulated_value FLOAT,
+    daily_return FLOAT,
+    volume FLOAT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(fund_id, nav_date)
+    FOREIGN KEY (fund_id) REFERENCES funds(id)
 );
 
-CREATE TABLE IF NOT EXISTS user_watchlist (
+CREATE TABLE IF NOT EXISTS watchlists (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     fund_id UUID REFERENCES funds(id) ON DELETE CASCADE,
@@ -80,7 +81,7 @@ CREATE TABLE IF NOT EXISTS user_watchlist (
     UNIQUE(user_id, fund_id)
 );
 
-CREATE TABLE IF NOT EXISTS user_holdings (
+CREATE TABLE IF NOT EXISTS holdings (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     fund_id UUID REFERENCES funds(id) ON DELETE CASCADE,
@@ -133,9 +134,10 @@ CREATE TABLE IF NOT EXISTS strategy_signals (
 
 CREATE INDEX IF NOT EXISTS idx_funds_code ON funds(code);
 CREATE INDEX IF NOT EXISTS idx_funds_name ON funds USING gin(name gin_trgm_ops);
-CREATE INDEX IF NOT EXISTS idx_fund_nav_history_fund_date ON fund_nav_history(fund_id, nav_date DESC);
-CREATE INDEX IF NOT EXISTS idx_user_watchlist_user ON user_watchlist(user_id);
-CREATE INDEX IF NOT EXISTS idx_user_holdings_user ON user_holdings(user_id);
+CREATE INDEX IF NOT EXISTS idx_fund_net_values_date ON fund_net_values(date);
+CREATE INDEX IF NOT EXISTS idx_fund_net_values_fund_id ON fund_net_values(fund_id);
+CREATE INDEX IF NOT EXISTS idx_watchlists_user ON watchlists(user_id);
+CREATE INDEX IF NOT EXISTS idx_holdings_user ON holdings(user_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_user_date ON transactions(user_id, transaction_date DESC);
 CREATE INDEX IF NOT EXISTS idx_strategy_signals_strategy_date ON strategy_signals(strategy_id, signal_date DESC);
 
@@ -153,35 +155,9 @@ CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
 CREATE TRIGGER update_funds_updated_at BEFORE UPDATE ON funds
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_user_holdings_updated_at BEFORE UPDATE ON user_holdings
+CREATE TRIGGER update_holdings_updated_at BEFORE UPDATE ON holdings
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_investment_strategies_updated_at BEFORE UPDATE ON investment_strategies
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- =============================
--- 示例数据
--- =============================
-
-INSERT INTO funds (code, name, fund_type, manager, company, establish_date, description) VALUES
-('000001', '华夏成长混合', '混合型', '张三', '华夏基金管理有限公司', '2001-12-18', '本基金主要投资于具有良好成长性的上市公司股票'),
-('110022', '易方达消费行业股票', '股票型', '李四', '易方达基金管理有限公司', '2010-08-20', '本基金主要投资于消费行业相关的优质上市公司'),
-('161725', '招商中证白酒指数', '指数型', '王五', '招商基金管理有限公司', '2015-05-27', '本基金跟踪中证白酒指数，投资于白酒行业相关股票'),
-('519066', '汇添富蓝筹稳健混合', '混合型', '赵六', '汇添富基金管理股份有限公司', '2007-03-12', '本基金主要投资于蓝筹股，追求稳健的长期回报')
-ON CONFLICT (code) DO NOTHING;
-
-UPDATE funds
-SET
-    manager = COALESCE(NULLIF(manager, ''), '未知基金经理'),
-    company = COALESCE(NULLIF(company, ''), '未知基金公司'),
-    description = COALESCE(NULLIF(description, ''), '暂无描述信息');
-
-INSERT INTO fund_nav_history (fund_id, nav_date, unit_nav, accumulated_nav, daily_return)
-SELECT 
-    f.id,
-    CURRENT_DATE - INTERVAL '1 day' * generate_series(0, 30),
-    round((1.0000 + (random() * 0.5))::numeric, 4),
-    round((1.0000 + (random() * 0.8))::numeric, 4),
-    round(((random() - 0.5) * 0.05)::numeric, 4)
-FROM funds f
-ON CONFLICT (fund_id, nav_date) DO NOTHING;

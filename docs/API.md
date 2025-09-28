@@ -206,13 +206,13 @@ GET /api/v1/funds/{fund_id}/nav-history?start_date=2024-01-01&end_date=2024-01-3
 
 #### 获取关注列表
 ```http
-GET /api/v1/watchlist/
+GET /api/v1/watchlist
 Authorization: Bearer <token>
 ```
 
 #### 添加基金到关注列表
 ```http
-POST /api/v1/watchlist/
+POST /api/v1/watchlist
 Authorization: Bearer <token>
 Content-Type: application/json
 

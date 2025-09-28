@@ -35,6 +35,7 @@ async def lifespan(app: FastAPI):
     """应用生命周期管理"""
     # 启动时执行
     logger.info("启动 FundAdvisor API 服务...")
+    logger.info("API 前缀: %s | root_path: %s", settings.API_V1_STR, getattr(app, "root_path", "/"))
     
     # 创建数据库表
     try:
