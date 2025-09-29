@@ -2,6 +2,7 @@
 关注列表相关 API 端点
 """
 import traceback
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 import logging
@@ -11,6 +12,7 @@ from typing import List
 from ....core.database import get_db
 from ....models import WatchList, Fund
 from ....schemas import WatchListRequest, WatchListResponse, APIResponse
+from ....services.data_service import data_service
 
 router = APIRouter()
 
@@ -62,10 +64,54 @@ async def add_to_watchlist(
     添加基金到关注列表
     """
     try:
-        # 检查基金是否存在
+        # 检查基金是否存在；不存在则尝试拉取并创建
         fund = db.query(Fund).filter(Fund.code == request.fund_code).first()
         if not fund:
-            raise HTTPException(status_code=404, detail="基金不存在")
+            # 从数据源获取基金基本信息并落库（轻量，不强制拉取净值）
+            fund_info = data_service.get_fund_info(request.fund_code)
+            if not fund_info:
+                raise HTTPException(status_code=404, detail="基金不存在")
+
+            # 解析成立日期
+            establish_date_value = fund_info.get("establish_date")
+            if establish_date_value == "":
+                establish_date_value = None
+            if isinstance(establish_date_value, str) and establish_date_value:
+                for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%Y%m%d"):
+                    try:
+                        establish_date_value = datetime.strptime(
+                            establish_date_value, fmt
+                        )
+                        break
+                    except ValueError:
+                        continue
+                else:
+                    establish_date_value = None
+
+            # 创建基金记录
+            try:
+                fund = Fund(
+                    code=fund_info.get("code", request.fund_code),
+                    name=fund_info.get("name", request.fund_code),
+                    fund_type=fund_info.get("fund_type"),
+                    manager=fund_info.get("manager"),
+                    company=fund_info.get("company"),
+                    establish_date=establish_date_value,
+                    scale=fund_info.get("scale"),
+                    current_nav=fund_info.get("current_nav"),
+                    accumulated_nav=fund_info.get("accumulated_nav"),
+                    daily_return=fund_info.get("daily_return"),
+                    description=fund_info.get("description", ""),
+                )
+                db.add(fund)
+                db.commit()
+                db.refresh(fund)
+            except Exception:
+                # 可能存在并发或唯一约束冲突，回滚后重查
+                db.rollback()
+                fund = db.query(Fund).filter(Fund.code == request.fund_code).first()
+                if not fund:
+                    raise
 
         # 检查是否已经关注
         existing = db.query(WatchList).filter(
